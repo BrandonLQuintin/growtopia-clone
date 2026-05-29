@@ -84,15 +84,16 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
         int tab_h = 28;
         int tabs_total = STORE_TAB_COUNT * tab_w;
         int tabs_x = (g_screen_w - tabs_total) / 2;
-        int tabs_y = 120;
+        int tabs_y = 60 + 36;
         for (int i = 0; i < STORE_TAB_COUNT; i++) {
             if (point_in_rect(mx, my, tabs_x + i * tab_w, tabs_y, tab_w, tab_h)) {
                 ui->store_category = i;
                 break;
             }
         }
-        int close_x = (g_screen_w + STORE_COLS * 90) / 2 + 8;
-        int close_y = 76;
+        int panel_w = STORE_COLS * 100 + 40;
+        int close_x = (g_screen_w + panel_w) / 2 - 28;
+        int close_y = 60 + 6;
         if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
             ui_close_all(ui);
         }
@@ -295,7 +296,7 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
 
     renderer_draw_rect(renderer, 0, 0, g_screen_w, g_screen_h, 0.0f, 0.0f, 0.0f, 0.6f);
 
-    int panel_w = STORE_COLS * 90 + 40;
+    int panel_w = STORE_COLS * 100 + 40;
     int panel_h = 480;
     int panel_x = (g_screen_w - panel_w) / 2;
     int panel_y = 60;

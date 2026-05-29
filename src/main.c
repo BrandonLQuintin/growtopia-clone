@@ -146,9 +146,9 @@ static void game_update(Game *g, float dt) {
             store_get_items(&store, g->ui.store_category, &entries, &entry_count);
             
             int STORE_COLS_LOCAL = 5;
-            int cell_w = 90;
+            int cell_w = 100;
             int cell_h = 80;
-            int panel_w = STORE_COLS_LOCAL * 90 + 40;
+            int panel_w = STORE_COLS_LOCAL * 100 + 40;
             int items_x = (g_screen_w - panel_w) / 2 + 20;
             int tabs_y = 60 + 36;
             int items_y = tabs_y + 28 + 16;
