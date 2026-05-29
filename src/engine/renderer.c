@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int g_screen_w = 1280;
+int g_screen_h = 720;
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "../stb_image.h"
 
@@ -735,8 +738,8 @@ static void setup_ortho(int w, int h) {
 
 int renderer_init(Renderer *r) {
     memset(r, 0, sizeof(*r));
-    r->windowed_w = SCREEN_WIDTH;
-    r->windowed_h = SCREEN_HEIGHT;
+    r->windowed_w = 1280;
+    r->windowed_h = 720;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -750,8 +753,8 @@ int renderer_init(Renderer *r) {
     r->window = SDL_CreateWindow("Growtopia Clone",
                                   SDL_WINDOWPOS_CENTERED,
                                   SDL_WINDOWPOS_CENTERED,
-                                  SCREEN_WIDTH, SCREEN_HEIGHT,
-                                  SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+                                   1280, 720,
+                                   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (!r->window) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         return -1;
@@ -771,7 +774,7 @@ int renderer_init(Renderer *r) {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_TEXTURE_2D);
 
-    setup_ortho(SCREEN_WIDTH, SCREEN_HEIGHT);
+    setup_ortho(1280, 720);
 
     return 0;
 }
@@ -866,26 +869,17 @@ int renderer_is_fullscreen(Renderer *r) {
 }
 
 void renderer_get_size(Renderer *r, int *w, int *h) {
-    if (r->fullscreen) {
-        SDL_DisplayMode dm;
-        SDL_GetCurrentDisplayMode(0, &dm);
-        *w = dm.w;
-        *h = dm.h;
-    } else {
-        *w = SCREEN_WIDTH;
-        *h = SCREEN_HEIGHT;
-    }
+    SDL_GetWindowSize(r->window, w, h);
 }
 
 void renderer_begin_tile_batch(Renderer *r) {
-    int w, h;
-    renderer_get_size(r, &w, &h);
+    renderer_get_size(r, &g_screen_w, &g_screen_h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, w, h, 0, -1, 1);
+    glOrtho(0, g_screen_w, g_screen_h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glViewport(0, 0, w, h);
+    glViewport(0, 0, g_screen_w, g_screen_h);
 }
 
 void renderer_end_tile_batch(Renderer *r) {
@@ -893,14 +887,13 @@ void renderer_end_tile_batch(Renderer *r) {
 }
 
 void renderer_begin_ui(Renderer *r) {
-    int w, h;
-    renderer_get_size(r, &w, &h);
+    renderer_get_size(r, &g_screen_w, &g_screen_h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, w, h, 0, -1, 1);
+    glOrtho(0, g_screen_w, g_screen_h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glViewport(0, 0, w, h);
+    glViewport(0, 0, g_screen_w, g_screen_h);
 }
 
 void renderer_end_ui(Renderer *r) {

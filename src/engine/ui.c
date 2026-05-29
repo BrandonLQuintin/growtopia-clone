@@ -71,8 +71,8 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
                 break;
             }
         }
-        int close_x = (SCREEN_WIDTH + INV_COLS * SLOT_SIZE) / 2 + 4;
-        int close_y = (SCREEN_HEIGHT - INV_ROWS * SLOT_SIZE) / 2 - 44;
+        int close_x = (g_screen_w + INV_COLS * SLOT_SIZE) / 2 + 4;
+        int close_y = (g_screen_h - INV_ROWS * SLOT_SIZE) / 2 - 44;
         if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
             ui_close_all(ui);
         }
@@ -83,7 +83,7 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
         int tab_w = 90;
         int tab_h = 28;
         int tabs_total = STORE_TAB_COUNT * tab_w;
-        int tabs_x = (SCREEN_WIDTH - tabs_total) / 2;
+        int tabs_x = (g_screen_w - tabs_total) / 2;
         int tabs_y = 120;
         for (int i = 0; i < STORE_TAB_COUNT; i++) {
             if (point_in_rect(mx, my, tabs_x + i * tab_w, tabs_y, tab_w, tab_h)) {
@@ -91,7 +91,7 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
                 break;
             }
         }
-        int close_x = (SCREEN_WIDTH + STORE_COLS * 90) / 2 + 8;
+        int close_x = (g_screen_w + STORE_COLS * 90) / 2 + 8;
         int close_y = 76;
         if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
             ui_close_all(ui);
@@ -172,8 +172,8 @@ static void render_slot_item(Renderer *r, int x, int y, int size, int item_id, i
 void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *hotbar_counts, int selected)
 {
     int total_w = HOTBAR_SLOTS * SLOT_SIZE;
-    int start_x = (SCREEN_WIDTH - total_w) / 2;
-    int start_y = SCREEN_HEIGHT - SLOT_SIZE - 8;
+    int start_x = (g_screen_w - total_w) / 2;
+    int start_y = g_screen_h - SLOT_SIZE - 8;
 
     renderer_draw_rect(renderer, start_x - 4, start_y - 4, total_w + 8, SLOT_SIZE + 8,
         0.0f, 0.0f, 0.0f, 0.5f);
@@ -198,7 +198,7 @@ void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *h
 
 void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size)
 {
-    renderer_draw_rect(renderer, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 0.0f, 0.6f);
+    renderer_draw_rect(renderer, 0, 0, g_screen_w, g_screen_h, 0.0f, 0.0f, 0.0f, 0.6f);
 
     int grid_w = INV_COLS * SLOT_SIZE;
     int grid_h = INV_ROWS * SLOT_SIZE;
@@ -206,8 +206,8 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
     int title_h = 30;
     int panel_w = grid_w + panel_pad * 2;
     int panel_h = grid_h + title_h + panel_pad * 2;
-    int panel_x = (SCREEN_WIDTH - panel_w) / 2;
-    int panel_y = (SCREEN_HEIGHT - panel_h) / 2;
+    int panel_x = (g_screen_w - panel_w) / 2;
+    int panel_y = (g_screen_h - panel_h) / 2;
 
     renderer_draw_rect(renderer, panel_x, panel_y, panel_w, panel_h,
         0.1f, 0.1f, 0.1f, 0.95f);
@@ -254,11 +254,11 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
 {
     ensure_store();
 
-    renderer_draw_rect(renderer, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 0.0f, 0.6f);
+    renderer_draw_rect(renderer, 0, 0, g_screen_w, g_screen_h, 0.0f, 0.0f, 0.0f, 0.6f);
 
     int panel_w = STORE_COLS * 90 + 40;
     int panel_h = 480;
-    int panel_x = (SCREEN_WIDTH - panel_w) / 2;
+    int panel_x = (g_screen_w - panel_w) / 2;
     int panel_y = 60;
 
     renderer_draw_rect(renderer, panel_x, panel_y, panel_w, panel_h,
@@ -285,7 +285,7 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
     int tab_w = 90;
     int tab_h = 28;
     int tabs_total = STORE_TAB_COUNT * tab_w;
-    int tabs_x = (SCREEN_WIDTH - tabs_total) / 2;
+    int tabs_x = (g_screen_w - tabs_total) / 2;
     int tabs_y = panel_y + 36;
 
     for (int i = 0; i < STORE_TAB_COUNT; i++) {
@@ -380,7 +380,7 @@ void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health)
 
     renderer_draw_number(renderer, health, bar_x + bar_w / 2 - 8, bar_y + 2, 0.45f, 1.0f, 1.0f, 1.0f);
 
-    int gem_icon_x = SCREEN_WIDTH - 100;
+    int gem_icon_x = g_screen_w - 100;
     int gem_icon_y = 12;
     renderer_draw_rect(renderer, gem_icon_x, gem_icon_y, 10, 10, 1.0f, 0.85f, 0.0f, 1.0f);
     renderer_draw_rect(renderer, gem_icon_x + 2, gem_icon_y - 2, 6, 2, 1.0f, 0.85f, 0.0f, 1.0f);

@@ -15,8 +15,8 @@ void camera_update(Camera *cam, float dt) {
     cam->x += (cam->target_x - cam->x) * cam->lerp_speed * dt;
     cam->y += (cam->target_y - cam->y) * cam->lerp_speed * dt;
 
-    float half_w = SCREEN_WIDTH / 2.0f;
-    float half_h = SCREEN_HEIGHT / 2.0f;
+    float half_w = g_screen_w / 2.0f;
+    float half_h = g_screen_h / 2.0f;
 
     if (cam->x - half_w < 0.0f)
         cam->x = half_w;
@@ -34,11 +34,11 @@ void camera_set_target(Camera *cam, float x, float y) {
 }
 
 void camera_world_to_screen(Camera *cam, float wx, float wy, int *sx, int *sy) {
-    *sx = (int)(wx - cam->x + SCREEN_WIDTH / 2.0f);
-    *sy = (int)(wy - cam->y + SCREEN_HEIGHT / 2.0f);
+    *sx = (int)(wx - cam->x + g_screen_w / 2.0f);
+    *sy = (int)(wy - cam->y + g_screen_h / 2.0f);
 }
 
 void camera_screen_to_world(Camera *cam, int sx, int sy, int *wx, int *wy) {
-    *wx = (int)((float)sx + cam->x - SCREEN_WIDTH / 2.0f);
-    *wy = (int)((float)sy + cam->y - SCREEN_HEIGHT / 2.0f);
+    *wx = (int)((float)sx + cam->x - g_screen_w / 2.0f);
+    *wy = (int)((float)sy + cam->y - g_screen_h / 2.0f);
 }

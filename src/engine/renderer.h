@@ -3,9 +3,10 @@
 
 #include <SDL2/SDL.h>
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
 #define TILE_SIZE 32
+
+extern int g_screen_w;
+extern int g_screen_h;
 
 typedef struct {
     SDL_Window *window;

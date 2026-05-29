@@ -149,7 +149,7 @@ static void game_update(Game *g, float dt) {
             int cell_w = 90;
             int cell_h = 80;
             int panel_w = STORE_COLS_LOCAL * 90 + 40;
-            int items_x = (SCREEN_WIDTH - panel_w) / 2 + 20;
+            int items_x = (g_screen_w - panel_w) / 2 + 20;
             int tabs_y = 60 + 36;
             int items_y = tabs_y + 28 + 16;
             
@@ -404,12 +404,12 @@ static void game_update(Game *g, float dt) {
 static void game_render(Game *g) {
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
-    float cam_left = g->camera.x - SCREEN_WIDTH / 2.0f;
-    float cam_top = g->camera.y - SCREEN_HEIGHT / 2.0f;
+    float cam_left = g->camera.x - g_screen_w / 2.0f;
+    float cam_top = g->camera.y - g_screen_h / 2.0f;
     int start_x = (int)(cam_left / TILE_SIZE) - 1;
     int start_y = (int)(cam_top / TILE_SIZE) - 1;
-    int end_x = start_x + (SCREEN_WIDTH / TILE_SIZE) + 3;
-    int end_y = start_y + (SCREEN_HEIGHT / TILE_SIZE) + 3;
+    int end_x = start_x + (g_screen_w / TILE_SIZE) + 3;
+    int end_y = start_y + (g_screen_h / TILE_SIZE) + 3;
     
     if (start_x < 0) start_x = 0;
     if (start_y < 0) start_y = 0;
@@ -511,7 +511,7 @@ static void game_render(Game *g) {
         ui_render_store_screen(&g->ui, &g->renderer, g->player.gems);
     }
     
-    renderer_draw_text(&g->renderer, "E: Inventory  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, SCREEN_HEIGHT - 20, 0.4f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(&g->renderer, "E: Inventory  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, g_screen_h - 20, 0.4f, 1.0f, 1.0f, 1.0f);
     
     renderer_end_ui(&g->renderer);
     
