@@ -275,7 +275,13 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
         if (ui->slots[i].hovered && ui->slots[i].item_id != 0) {
             const char *name = item_get_name((uint16_t)ui->slots[i].item_id);
             if (name) {
-                int tw = renderer_text_width(renderer, name, 1.5f);
+                char label[64];
+                if (item_is_seed((uint16_t)ui->slots[i].item_id)) {
+                    snprintf(label, sizeof(label), "%s (Seed)", name);
+                } else {
+                    snprintf(label, sizeof(label), "%s", name);
+                }
+                int tw = renderer_text_width(renderer, label, 1.5f);
                 int th = 12;
                 int tx = ui->slots[i].x + SLOT_SIZE / 2 - tw / 2;
                 int ty = ui->slots[i].y - th - 8;
@@ -283,10 +289,16 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
                 if (tx + tw + 6 > g_screen_w) tx = g_screen_w - tw - 6;
                 if (ty < 2) ty = ui->slots[i].y + SLOT_SIZE + 4;
                 renderer_draw_rect(renderer, tx - 4, ty - 2, tw + 8, th + 6, 0.0f, 0.0f, 0.0f, 0.85f);
-                renderer_draw_text(renderer, name, tx, ty, 1.5f, 1.0f, 1.0f, 1.0f);
+                renderer_draw_text(renderer, label, tx, ty, 1.5f, 1.0f, 1.0f, 1.0f);
             }
             break;
         }
+    }
+    
+    {
+        const char *hint = "Click 2 seeds to splice them!";
+        int hw = renderer_text_width(renderer, hint, 1.0f);
+        renderer_draw_text(renderer, hint, panel_x + (panel_w - hw) / 2, panel_y + panel_h + 6, 1.0f, 0.8f, 0.8f, 0.5f);
     }
 }
 
