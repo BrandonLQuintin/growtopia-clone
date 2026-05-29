@@ -1,0 +1,6 @@
+build/
+growtopia
+res/worlds/*.wld
+res/worlds/*.inv
+res/worlds/*.player
+*.o

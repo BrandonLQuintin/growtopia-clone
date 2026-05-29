@@ -1,0 +1,390 @@
+#include "ui.h"
+#include "../game/store.h"
+#include "../game/player.h"
+#include <string.h>
+#include <stdio.h>
+
+#define SLOT_SIZE 48
+#define HOTBAR_SLOTS 9
+#define INV_COLS 9
+#define INV_ROWS 4
+#define STORE_COLS 5
+#define STORE_TAB_COUNT 5
+
+static const char *store_tab_names[STORE_TAB_COUNT] = {
+    "BLOCKS", "SEEDS", "TOOLS", "CLOTHES", "SPECIAL"
+};
+
+static Store s_store;
+static int s_store_init = 0;
+
+static void ensure_store(void)
+{
+    if (!s_store_init) {
+        store_init(&s_store);
+        s_store_init = 1;
+    }
+}
+
+void ui_init(UI *ui)
+{
+    memset(ui, 0, sizeof(UI));
+    ui->hotbar_selection = 0;
+    ui->store_category = 0;
+    ui->state = UI_STATE_NONE;
+    ui->selected_slot = -1;
+    ui->drag_from_slot = -1;
+    ui->tooltip_slot = -1;
+}
+
+static int point_in_rect(int px, int py, int rx, int ry, int rw, int rh)
+{
+    return px >= rx && px < rx + rw && py >= ry && py < ry + rh;
+}
+
+void ui_update(UI *ui, Input *input, Renderer *renderer)
+{
+    (void)renderer;
+    int mx = input->mouse_x;
+    int my = input->mouse_y;
+
+    for (int i = 0; i < ui->slot_count; i++) {
+        UISlot *s = &ui->slots[i];
+        s->hovered = point_in_rect(mx, my, s->x, s->y, s->size, s->size);
+    }
+
+    if (!input_is_mouse_clicked(input, 1)) return;
+
+    if (ui->state == UI_STATE_INVENTORY) {
+        for (int i = 0; i < ui->slot_count; i++) {
+            if (ui->slots[i].hovered) {
+                if (ui->selected_slot < 0) {
+                    ui->selected_slot = i;
+                    ui->drag_from_slot = -1;
+                } else if (ui->selected_slot == i) {
+                    ui->selected_slot = -1;
+                    ui->drag_from_slot = -1;
+                } else {
+                    ui->drag_from_slot = ui->selected_slot;
+                    ui->selected_slot = i;
+                }
+                break;
+            }
+        }
+        int close_x = (SCREEN_WIDTH + INV_COLS * SLOT_SIZE) / 2 + 4;
+        int close_y = (SCREEN_HEIGHT - INV_ROWS * SLOT_SIZE) / 2 - 44;
+        if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
+            ui_close_all(ui);
+        }
+    }
+
+    if (ui->state == UI_STATE_STORE) {
+        ensure_store();
+        int tab_w = 90;
+        int tab_h = 28;
+        int tabs_total = STORE_TAB_COUNT * tab_w;
+        int tabs_x = (SCREEN_WIDTH - tabs_total) / 2;
+        int tabs_y = 120;
+        for (int i = 0; i < STORE_TAB_COUNT; i++) {
+            if (point_in_rect(mx, my, tabs_x + i * tab_w, tabs_y, tab_w, tab_h)) {
+                ui->store_category = i;
+                break;
+            }
+        }
+        int close_x = (SCREEN_WIDTH + STORE_COLS * 90) / 2 + 8;
+        int close_y = 76;
+        if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
+            ui_close_all(ui);
+        }
+    }
+}
+
+void ui_render(UI *ui, Renderer *renderer)
+{
+    (void)ui;
+    (void)renderer;
+}
+
+void ui_toggle_inventory(UI *ui)
+{
+    if (ui->state == UI_STATE_INVENTORY) {
+        ui->state = UI_STATE_NONE;
+    } else {
+        ui->state = UI_STATE_INVENTORY;
+    }
+    ui->selected_slot = -1;
+    ui->drag_from_slot = -1;
+}
+
+void ui_toggle_store(UI *ui)
+{
+    if (ui->state == UI_STATE_STORE) {
+        ui->state = UI_STATE_NONE;
+    } else {
+        ui->state = UI_STATE_STORE;
+    }
+    ui->store_category = 0;
+    ui->selected_slot = -1;
+    ui->drag_from_slot = -1;
+}
+
+void ui_close_all(UI *ui)
+{
+    ui->state = UI_STATE_NONE;
+    ui->selected_slot = -1;
+    ui->drag_from_slot = -1;
+}
+
+int ui_get_hotbar_selection(UI *ui)
+{
+    return ui->hotbar_selection;
+}
+
+static void render_slot_bg(Renderer *r, int x, int y, int size, int selected, int hovered)
+{
+    renderer_draw_rect(r, x, y, size, size, 0.15f, 0.15f, 0.15f, 0.9f);
+    if (selected) {
+        renderer_draw_rect(r, x - 2, y - 2, size + 4, size + 4, 1.0f, 1.0f, 0.0f, 1.0f);
+        renderer_draw_rect(r, x, y, size, size, 0.15f, 0.15f, 0.15f, 0.9f);
+    } else if (hovered) {
+        renderer_draw_rect(r, x - 1, y - 1, size + 2, size + 2, 0.7f, 0.7f, 0.7f, 1.0f);
+        renderer_draw_rect(r, x, y, size, size, 0.15f, 0.15f, 0.15f, 0.9f);
+    }
+    renderer_draw_rect(r, x, y, size, 1, 0.5f, 0.5f, 0.5f, 1.0f);
+    renderer_draw_rect(r, x, y + size - 1, size, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+    renderer_draw_rect(r, x, y, 1, size, 0.5f, 0.5f, 0.5f, 1.0f);
+    renderer_draw_rect(r, x + size - 1, y, 1, size, 0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+static void render_slot_item(Renderer *r, int x, int y, int size, int item_id, int count)
+{
+    if (item_id == 0) return;
+    int cr, cg, cb;
+    item_get_color((uint16_t)item_id, &cr, &cg, &cb);
+    int pad = 4;
+    renderer_draw_rect(r, x + pad, y + pad, size - pad * 2, size - pad * 2,
+        cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    if (count > 1) {
+        renderer_draw_number(r, count, x + size - 20, y + size - 14, 0.4f, 1.0f, 1.0f, 1.0f);
+    }
+}
+
+void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *hotbar_counts, int selected)
+{
+    int total_w = HOTBAR_SLOTS * SLOT_SIZE;
+    int start_x = (SCREEN_WIDTH - total_w) / 2;
+    int start_y = SCREEN_HEIGHT - SLOT_SIZE - 8;
+
+    renderer_draw_rect(renderer, start_x - 4, start_y - 4, total_w + 8, SLOT_SIZE + 8,
+        0.0f, 0.0f, 0.0f, 0.5f);
+
+    ui->slot_count = 0;
+    for (int i = 0; i < HOTBAR_SLOTS && ui->slot_count < UI_MAX_SLOTS; i++) {
+        int sx = start_x + i * SLOT_SIZE;
+        int sy = start_y;
+        UISlot *s = &ui->slots[ui->slot_count];
+        s->x = sx;
+        s->y = sy;
+        s->size = SLOT_SIZE;
+        s->item_id = hotbar_items[i];
+        s->count = hotbar_counts[i];
+        s->selected = (i == selected);
+        ui->slot_count++;
+
+        render_slot_bg(renderer, sx, sy, SLOT_SIZE, i == selected, s->hovered);
+        render_slot_item(renderer, sx, sy, SLOT_SIZE, hotbar_items[i], hotbar_counts[i]);
+    }
+}
+
+void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size)
+{
+    renderer_draw_rect(renderer, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 0.0f, 0.6f);
+
+    int grid_w = INV_COLS * SLOT_SIZE;
+    int grid_h = INV_ROWS * SLOT_SIZE;
+    int panel_pad = 10;
+    int title_h = 30;
+    int panel_w = grid_w + panel_pad * 2;
+    int panel_h = grid_h + title_h + panel_pad * 2;
+    int panel_x = (SCREEN_WIDTH - panel_w) / 2;
+    int panel_y = (SCREEN_HEIGHT - panel_h) / 2;
+
+    renderer_draw_rect(renderer, panel_x, panel_y, panel_w, panel_h,
+        0.1f, 0.1f, 0.1f, 0.95f);
+    renderer_draw_rect(renderer, panel_x, panel_y, panel_w, 2, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, panel_x, panel_y + panel_h - 2, panel_w, 2, 0.0f, 0.0f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, panel_x, panel_y, 2, panel_h, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, panel_x + panel_w - 2, panel_y, 2, panel_h, 0.0f, 0.0f, 0.0f, 1.0f);
+
+    int title_w = renderer_text_width(renderer, "Inventory", 0.7f);
+    renderer_draw_text(renderer, "Inventory",
+        panel_x + (panel_w - title_w) / 2, panel_y + 8, 0.7f, 1.0f, 1.0f, 1.0f);
+
+    int close_x = panel_x + panel_w - 28;
+    int close_y = panel_y + 6;
+    renderer_draw_rect(renderer, close_x, close_y, 20, 20, 0.6f, 0.15f, 0.15f, 1.0f);
+    renderer_draw_text(renderer, "X", close_x + 6, close_y + 4, 0.5f, 1.0f, 1.0f, 1.0f);
+
+    int grid_x = panel_x + panel_pad;
+    int grid_y = panel_y + title_h + panel_pad;
+
+    ui->slot_count = 0;
+    for (int i = 0; i < inv_size && ui->slot_count < UI_MAX_SLOTS; i++) {
+        int col = i % INV_COLS;
+        int row = i / INV_COLS;
+        int sx = grid_x + col * SLOT_SIZE;
+        int sy = grid_y + row * SLOT_SIZE;
+
+        UISlot *s = &ui->slots[ui->slot_count];
+        s->x = sx;
+        s->y = sy;
+        s->size = SLOT_SIZE;
+        s->item_id = inv_items[i];
+        s->count = inv_counts[i];
+        s->selected = (ui->drag_from_slot == i);
+        ui->slot_count++;
+
+        int is_sel = (ui->drag_from_slot == i);
+        render_slot_bg(renderer, sx, sy, SLOT_SIZE, is_sel, s->hovered);
+        render_slot_item(renderer, sx, sy, SLOT_SIZE, inv_items[i], inv_counts[i]);
+    }
+}
+
+void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
+{
+    ensure_store();
+
+    renderer_draw_rect(renderer, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 0.0f, 0.6f);
+
+    int panel_w = STORE_COLS * 90 + 40;
+    int panel_h = 480;
+    int panel_x = (SCREEN_WIDTH - panel_w) / 2;
+    int panel_y = 60;
+
+    renderer_draw_rect(renderer, panel_x, panel_y, panel_w, panel_h,
+        0.1f, 0.1f, 0.1f, 0.95f);
+    renderer_draw_rect(renderer, panel_x, panel_y, panel_w, 2, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, panel_x, panel_y + panel_h - 2, panel_w, 2, 0.0f, 0.0f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, panel_x, panel_y, 2, panel_h, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, panel_x + panel_w - 2, panel_y, 2, panel_h, 0.0f, 0.0f, 0.0f, 1.0f);
+
+    int title_w = renderer_text_width(renderer, "Store", 0.7f);
+    renderer_draw_text(renderer, "Store",
+        panel_x + (panel_w - title_w) / 2, panel_y + 6, 0.7f, 1.0f, 1.0f, 1.0f);
+
+    int close_x = panel_x + panel_w - 28;
+    int close_y = panel_y + 6;
+    renderer_draw_rect(renderer, close_x, close_y, 20, 20, 0.6f, 0.15f, 0.15f, 1.0f);
+    renderer_draw_text(renderer, "X", close_x + 6, close_y + 4, 0.5f, 1.0f, 1.0f, 1.0f);
+
+    char gem_buf[32];
+    snprintf(gem_buf, sizeof(gem_buf), "Gems: %d", gems);
+    renderer_draw_text(renderer, gem_buf, panel_x + panel_w - 120, panel_y + 10, 0.45f,
+        1.0f, 0.9f, 0.0f);
+
+    int tab_w = 90;
+    int tab_h = 28;
+    int tabs_total = STORE_TAB_COUNT * tab_w;
+    int tabs_x = (SCREEN_WIDTH - tabs_total) / 2;
+    int tabs_y = panel_y + 36;
+
+    for (int i = 0; i < STORE_TAB_COUNT; i++) {
+        int tx = tabs_x + i * tab_w;
+        if (i == ui->store_category) {
+            renderer_draw_rect(renderer, tx, tabs_y, tab_w, tab_h,
+                0.3f, 0.3f, 0.6f, 1.0f);
+        } else {
+            renderer_draw_rect(renderer, tx, tabs_y, tab_w, tab_h,
+                0.2f, 0.2f, 0.2f, 0.9f);
+        }
+        renderer_draw_rect(renderer, tx, tabs_y, tab_w, 1, 0.5f, 0.5f, 0.5f, 1.0f);
+        renderer_draw_rect(renderer, tx, tabs_y + tab_h - 1, tab_w, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+        renderer_draw_rect(renderer, tx, tabs_y, 1, tab_h, 0.5f, 0.5f, 0.5f, 1.0f);
+        renderer_draw_rect(renderer, tx + tab_w - 1, tabs_y, 1, tab_h, 0.0f, 0.0f, 0.0f, 1.0f);
+        int tw = renderer_text_width(renderer, store_tab_names[i], 0.35f);
+        renderer_draw_text(renderer, store_tab_names[i],
+            tx + (tab_w - tw) / 2, tabs_y + 8, 0.35f, 1.0f, 1.0f, 1.0f);
+    }
+
+    StoreEntry *entries;
+    int entry_count;
+    store_get_items(&s_store, ui->store_category, &entries, &entry_count);
+
+    int items_x = panel_x + 20;
+    int items_y = tabs_y + tab_h + 16;
+    int cell_w = 90;
+    int cell_h = 80;
+
+    for (int i = 0; i < entry_count; i++) {
+        int col = i % STORE_COLS;
+        int row = i / STORE_COLS;
+        int cx = items_x + col * cell_w;
+        int cy = items_y + row * cell_h;
+
+        renderer_draw_rect(renderer, cx, cy, SLOT_SIZE, SLOT_SIZE,
+            0.15f, 0.15f, 0.15f, 0.9f);
+        renderer_draw_rect(renderer, cx, cy, SLOT_SIZE, 1, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(renderer, cx, cy + SLOT_SIZE - 1, SLOT_SIZE, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+        renderer_draw_rect(renderer, cx, cy, 1, SLOT_SIZE, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(renderer, cx + SLOT_SIZE - 1, cy, 1, SLOT_SIZE, 0.0f, 0.0f, 0.0f, 1.0f);
+
+        int cr, cg, cb;
+        item_get_color(entries[i].item_id, &cr, &cg, &cb);
+        renderer_draw_rect(renderer, cx + 4, cy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8,
+            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+
+        const char *name = item_get_name(entries[i].item_id);
+        if (name) {
+            int max_chars = cell_w / 5;
+            char truncated[32];
+            int len = 0;
+            while (name[len] && len < max_chars && len < 30) {
+                truncated[len] = name[len];
+                len++;
+            }
+            truncated[len] = '\0';
+            renderer_draw_text(renderer, truncated, cx, cy + SLOT_SIZE + 2, 0.3f,
+                0.8f, 0.8f, 0.8f);
+        }
+
+        char price_buf[16];
+        snprintf(price_buf, sizeof(price_buf), "%d", entries[i].price);
+        renderer_draw_text(renderer, price_buf, cx + SLOT_SIZE + 2, cy + SLOT_SIZE / 2 - 4,
+            0.35f, 1.0f, 0.9f, 0.0f);
+    }
+}
+
+void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health)
+{
+    (void)ui;
+
+    int bar_w = 200;
+    int bar_h = 16;
+    int bar_x = 10;
+    int bar_y = 10;
+
+    renderer_draw_rect(renderer, bar_x, bar_y, bar_w, bar_h, 0.2f, 0.2f, 0.2f, 0.8f);
+    renderer_draw_rect(renderer, bar_x, bar_y, bar_w, 1, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, bar_x, bar_y + bar_h - 1, bar_w, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, bar_x, bar_y, 1, bar_h, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, bar_x + bar_w - 1, bar_y, 1, bar_h, 0.0f, 0.0f, 0.0f, 1.0f);
+
+    if (health > 0 && MAX_HEALTH > 0) {
+        int fill_w = (bar_w * health) / MAX_HEALTH;
+        if (fill_w > bar_w) fill_w = bar_w;
+        float hp_ratio = (float)health / MAX_HEALTH;
+        float r = 1.0f - hp_ratio;
+        float g = hp_ratio;
+        renderer_draw_rect(renderer, bar_x + 1, bar_y + 1, fill_w - 2, bar_h - 2, r, g, 0.0f, 0.9f);
+    }
+
+    renderer_draw_number(renderer, health, bar_x + bar_w / 2 - 8, bar_y + 2, 0.45f, 1.0f, 1.0f, 1.0f);
+
+    int gem_icon_x = SCREEN_WIDTH - 100;
+    int gem_icon_y = 12;
+    renderer_draw_rect(renderer, gem_icon_x, gem_icon_y, 10, 10, 1.0f, 0.85f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, gem_icon_x + 2, gem_icon_y - 2, 6, 2, 1.0f, 0.85f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, gem_icon_x + 2, gem_icon_y + 10, 6, 2, 1.0f, 0.85f, 0.0f, 1.0f);
+
+    renderer_draw_number(renderer, gems, gem_icon_x + 16, gem_icon_y, 0.5f, 1.0f, 0.9f, 0.0f);
+}
