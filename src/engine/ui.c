@@ -161,11 +161,15 @@ static void render_slot_item(Renderer *r, int x, int y, int size, int item_id, i
     if (item_id == 0) return;
     int cr, cg, cb;
     item_get_color((uint16_t)item_id, &cr, &cg, &cb);
-    int pad = 4;
+    int pad = 6;
     renderer_draw_rect(r, x + pad, y + pad, size - pad * 2, size - pad * 2,
         cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
-    if (count > 1) {
-        renderer_draw_number(r, count, x + size - 20, y + size - 14, 0.4f, 1.0f, 1.0f, 1.0f);
+    if (count > 0) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d", count);
+        int tw = renderer_text_width(r, buf, 1.0f);
+        renderer_draw_rect(r, x + size - tw - 6, y + size - 12, tw + 4, 11, 0.0f, 0.0f, 0.0f, 0.6f);
+        renderer_draw_text(r, buf, x + size - tw - 4, y + size - 11, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
 
@@ -194,6 +198,23 @@ void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *h
         render_slot_bg(renderer, sx, sy, SLOT_SIZE, i == selected, s->hovered);
         render_slot_item(renderer, sx, sy, SLOT_SIZE, hotbar_items[i], hotbar_counts[i]);
     }
+
+    for (int i = 0; i < ui->slot_count; i++) {
+        if (ui->slots[i].hovered && ui->slots[i].item_id != 0) {
+            const char *name = item_get_name((uint16_t)ui->slots[i].item_id);
+            if (name) {
+                int tw = renderer_text_width(renderer, name, 1.5f);
+                int th = 12;
+                int tx = ui->slots[i].x + SLOT_SIZE / 2 - tw / 2;
+                int ty = ui->slots[i].y - th - 8;
+                if (tx < 2) tx = 2;
+                if (tx + tw + 6 > g_screen_w) tx = g_screen_w - tw - 6;
+                renderer_draw_rect(renderer, tx - 4, ty - 2, tw + 8, th + 6, 0.0f, 0.0f, 0.0f, 0.85f);
+                renderer_draw_text(renderer, name, tx, ty, 1.5f, 1.0f, 1.0f, 1.0f);
+            }
+            break;
+        }
+    }
 }
 
 void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size)
@@ -203,7 +224,7 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
     int grid_w = INV_COLS * SLOT_SIZE;
     int grid_h = INV_ROWS * SLOT_SIZE;
     int panel_pad = 10;
-    int title_h = 30;
+    int title_h = 36;
     int panel_w = grid_w + panel_pad * 2;
     int panel_h = grid_h + title_h + panel_pad * 2;
     int panel_x = (g_screen_w - panel_w) / 2;
@@ -216,14 +237,14 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
     renderer_draw_rect(renderer, panel_x, panel_y, 2, panel_h, 0.4f, 0.4f, 0.4f, 1.0f);
     renderer_draw_rect(renderer, panel_x + panel_w - 2, panel_y, 2, panel_h, 0.0f, 0.0f, 0.0f, 1.0f);
 
-    int title_w = renderer_text_width(renderer, "Inventory", 0.7f);
+    int title_w = renderer_text_width(renderer, "Inventory", 2.0f);
     renderer_draw_text(renderer, "Inventory",
-        panel_x + (panel_w - title_w) / 2, panel_y + 8, 0.7f, 1.0f, 1.0f, 1.0f);
+        panel_x + (panel_w - title_w) / 2, panel_y + 6, 2.0f, 1.0f, 1.0f, 1.0f);
 
     int close_x = panel_x + panel_w - 28;
     int close_y = panel_y + 6;
     renderer_draw_rect(renderer, close_x, close_y, 20, 20, 0.6f, 0.15f, 0.15f, 1.0f);
-    renderer_draw_text(renderer, "X", close_x + 6, close_y + 4, 0.5f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(renderer, "X", close_x + 6, close_y + 3, 1.5f, 1.0f, 1.0f, 1.0f);
 
     int grid_x = panel_x + panel_pad;
     int grid_y = panel_y + title_h + panel_pad;
@@ -248,6 +269,24 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
         render_slot_bg(renderer, sx, sy, SLOT_SIZE, is_sel, s->hovered);
         render_slot_item(renderer, sx, sy, SLOT_SIZE, inv_items[i], inv_counts[i]);
     }
+
+    for (int i = 0; i < ui->slot_count; i++) {
+        if (ui->slots[i].hovered && ui->slots[i].item_id != 0) {
+            const char *name = item_get_name((uint16_t)ui->slots[i].item_id);
+            if (name) {
+                int tw = renderer_text_width(renderer, name, 1.5f);
+                int th = 12;
+                int tx = ui->slots[i].x + SLOT_SIZE / 2 - tw / 2;
+                int ty = ui->slots[i].y - th - 8;
+                if (tx < 2) tx = 2;
+                if (tx + tw + 6 > g_screen_w) tx = g_screen_w - tw - 6;
+                if (ty < 2) ty = ui->slots[i].y + SLOT_SIZE + 4;
+                renderer_draw_rect(renderer, tx - 4, ty - 2, tw + 8, th + 6, 0.0f, 0.0f, 0.0f, 0.85f);
+                renderer_draw_text(renderer, name, tx, ty, 1.5f, 1.0f, 1.0f, 1.0f);
+            }
+            break;
+        }
+    }
 }
 
 void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
@@ -268,21 +307,22 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
     renderer_draw_rect(renderer, panel_x, panel_y, 2, panel_h, 0.4f, 0.4f, 0.4f, 1.0f);
     renderer_draw_rect(renderer, panel_x + panel_w - 2, panel_y, 2, panel_h, 0.0f, 0.0f, 0.0f, 1.0f);
 
-    int title_w = renderer_text_width(renderer, "Store", 0.7f);
+    int title_w = renderer_text_width(renderer, "Store", 2.0f);
     renderer_draw_text(renderer, "Store",
-        panel_x + (panel_w - title_w) / 2, panel_y + 6, 0.7f, 1.0f, 1.0f, 1.0f);
+        panel_x + (panel_w - title_w) / 2, panel_y + 6, 2.0f, 1.0f, 1.0f, 1.0f);
 
     int close_x = panel_x + panel_w - 28;
     int close_y = panel_y + 6;
     renderer_draw_rect(renderer, close_x, close_y, 20, 20, 0.6f, 0.15f, 0.15f, 1.0f);
-    renderer_draw_text(renderer, "X", close_x + 6, close_y + 4, 0.5f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(renderer, "X", close_x + 6, close_y + 3, 1.5f, 1.0f, 1.0f, 1.0f);
 
     char gem_buf[32];
     snprintf(gem_buf, sizeof(gem_buf), "Gems: %d", gems);
-    renderer_draw_text(renderer, gem_buf, panel_x + panel_w - 120, panel_y + 10, 0.45f,
+    int gw = renderer_text_width(renderer, gem_buf, 1.5f);
+    renderer_draw_text(renderer, gem_buf, panel_x + panel_w - gw - 16, panel_y + 10, 1.5f,
         1.0f, 0.9f, 0.0f);
 
-    int tab_w = 90;
+    int tab_w = 110;
     int tab_h = 28;
     int tabs_total = STORE_TAB_COUNT * tab_w;
     int tabs_x = (g_screen_w - tabs_total) / 2;
@@ -301,9 +341,9 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
         renderer_draw_rect(renderer, tx, tabs_y + tab_h - 1, tab_w, 1, 0.0f, 0.0f, 0.0f, 1.0f);
         renderer_draw_rect(renderer, tx, tabs_y, 1, tab_h, 0.5f, 0.5f, 0.5f, 1.0f);
         renderer_draw_rect(renderer, tx + tab_w - 1, tabs_y, 1, tab_h, 0.0f, 0.0f, 0.0f, 1.0f);
-        int tw = renderer_text_width(renderer, store_tab_names[i], 0.35f);
+        int tw = renderer_text_width(renderer, store_tab_names[i], 1.2f);
         renderer_draw_text(renderer, store_tab_names[i],
-            tx + (tab_w - tw) / 2, tabs_y + 8, 0.35f, 1.0f, 1.0f, 1.0f);
+            tx + (tab_w - tw) / 2, tabs_y + 6, 1.2f, 1.0f, 1.0f, 1.0f);
     }
 
     StoreEntry *entries;
@@ -312,7 +352,7 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
 
     int items_x = panel_x + 20;
     int items_y = tabs_y + tab_h + 16;
-    int cell_w = 90;
+    int cell_w = 100;
     int cell_h = 80;
 
     for (int i = 0; i < entry_count; i++) {
@@ -330,12 +370,12 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
 
         int cr, cg, cb;
         item_get_color(entries[i].item_id, &cr, &cg, &cb);
-        renderer_draw_rect(renderer, cx + 4, cy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8,
+        renderer_draw_rect(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12,
             cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
 
         const char *name = item_get_name(entries[i].item_id);
         if (name) {
-            int max_chars = cell_w / 5;
+            int max_chars = 10;
             char truncated[32];
             int len = 0;
             while (name[len] && len < max_chars && len < 30) {
@@ -343,14 +383,14 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
                 len++;
             }
             truncated[len] = '\0';
-            renderer_draw_text(renderer, truncated, cx, cy + SLOT_SIZE + 2, 0.3f,
+            renderer_draw_text(renderer, truncated, cx, cy + SLOT_SIZE + 2, 1.0f,
                 0.8f, 0.8f, 0.8f);
         }
 
         char price_buf[16];
-        snprintf(price_buf, sizeof(price_buf), "%d", entries[i].price);
-        renderer_draw_text(renderer, price_buf, cx + SLOT_SIZE + 2, cy + SLOT_SIZE / 2 - 4,
-            0.35f, 1.0f, 0.9f, 0.0f);
+        snprintf(price_buf, sizeof(price_buf), "%dg", entries[i].price);
+        renderer_draw_text(renderer, price_buf, cx + SLOT_SIZE + 4, cy + SLOT_SIZE / 2 - 6,
+            1.0f, 1.0f, 0.9f, 0.0f);
     }
 }
 
@@ -358,10 +398,10 @@ void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health)
 {
     (void)ui;
 
-    int bar_w = 200;
-    int bar_h = 16;
-    int bar_x = 10;
-    int bar_y = 10;
+    int bar_w = 240;
+    int bar_h = 22;
+    int bar_x = 12;
+    int bar_y = 12;
 
     renderer_draw_rect(renderer, bar_x, bar_y, bar_w, bar_h, 0.2f, 0.2f, 0.2f, 0.8f);
     renderer_draw_rect(renderer, bar_x, bar_y, bar_w, 1, 0.4f, 0.4f, 0.4f, 1.0f);
@@ -378,13 +418,19 @@ void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health)
         renderer_draw_rect(renderer, bar_x + 1, bar_y + 1, fill_w - 2, bar_h - 2, r, g, 0.0f, 0.9f);
     }
 
-    renderer_draw_number(renderer, health, bar_x + bar_w / 2 - 8, bar_y + 2, 0.45f, 1.0f, 1.0f, 1.0f);
+    char hp_buf[16];
+    snprintf(hp_buf, sizeof(hp_buf), "%d/%d", health, MAX_HEALTH);
+    int hpw = renderer_text_width(renderer, hp_buf, 1.5f);
+    renderer_draw_text(renderer, hp_buf, bar_x + (bar_w - hpw) / 2, bar_y + 3, 1.5f, 1.0f, 1.0f, 1.0f);
 
-    int gem_icon_x = g_screen_w - 100;
-    int gem_icon_y = 12;
-    renderer_draw_rect(renderer, gem_icon_x, gem_icon_y, 10, 10, 1.0f, 0.85f, 0.0f, 1.0f);
-    renderer_draw_rect(renderer, gem_icon_x + 2, gem_icon_y - 2, 6, 2, 1.0f, 0.85f, 0.0f, 1.0f);
-    renderer_draw_rect(renderer, gem_icon_x + 2, gem_icon_y + 10, 6, 2, 1.0f, 0.85f, 0.0f, 1.0f);
+    int gem_size = 20;
+    int gem_x = g_screen_w - 180;
+    int gem_y = 12;
+    renderer_draw_rect(renderer, gem_x, gem_y, gem_size, gem_size, 1.0f, 0.85f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, gem_x + 4, gem_y - 4, gem_size - 8, 4, 1.0f, 0.85f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, gem_x + 4, gem_y + gem_size, gem_size - 8, 4, 1.0f, 0.85f, 0.0f, 1.0f);
 
-    renderer_draw_number(renderer, gems, gem_icon_x + 16, gem_icon_y, 0.5f, 1.0f, 0.9f, 0.0f);
+    char gem_buf[16];
+    snprintf(gem_buf, sizeof(gem_buf), "%d", gems);
+    renderer_draw_text(renderer, gem_buf, gem_x + gem_size + 8, gem_y + 2, 2.0f, 1.0f, 0.9f, 0.0f);
 }

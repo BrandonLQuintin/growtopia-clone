@@ -511,7 +511,7 @@ static void game_render(Game *g) {
         ui_render_store_screen(&g->ui, &g->renderer, g->player.gems);
     }
     
-    renderer_draw_text(&g->renderer, "E: Inventory  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, g_screen_h - 20, 0.4f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
     
     renderer_end_ui(&g->renderer);
     
