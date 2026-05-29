@@ -735,6 +735,8 @@ static void setup_ortho(int w, int h) {
 
 int renderer_init(Renderer *r) {
     memset(r, 0, sizeof(*r));
+    r->windowed_w = SCREEN_WIDTH;
+    r->windowed_h = SCREEN_HEIGHT;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -846,13 +848,44 @@ int renderer_text_width(Renderer *r, const char *text, float scale) {
     return (int)(len * (FONT_CHAR_WIDTH + 1) * scale - scale);
 }
 
+void renderer_toggle_fullscreen(Renderer *r) {
+    r->fullscreen = !r->fullscreen;
+    if (r->fullscreen) {
+        SDL_GetWindowPosition(r->window, &r->windowed_x, &r->windowed_y);
+        SDL_GetWindowSize(r->window, &r->windowed_w, &r->windowed_h);
+        SDL_SetWindowFullscreen(r->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    } else {
+        SDL_SetWindowFullscreen(r->window, 0);
+        SDL_SetWindowPosition(r->window, r->windowed_x, r->windowed_y);
+        SDL_SetWindowSize(r->window, r->windowed_w, r->windowed_h);
+    }
+}
+
+int renderer_is_fullscreen(Renderer *r) {
+    return r->fullscreen;
+}
+
+void renderer_get_size(Renderer *r, int *w, int *h) {
+    if (r->fullscreen) {
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+        *w = dm.w;
+        *h = dm.h;
+    } else {
+        *w = SCREEN_WIDTH;
+        *h = SCREEN_HEIGHT;
+    }
+}
+
 void renderer_begin_tile_batch(Renderer *r) {
-    (void)r;
+    int w, h;
+    renderer_get_size(r, &w, &h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+    glOrtho(0, w, h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glViewport(0, 0, w, h);
 }
 
 void renderer_end_tile_batch(Renderer *r) {
@@ -860,12 +893,14 @@ void renderer_end_tile_batch(Renderer *r) {
 }
 
 void renderer_begin_ui(Renderer *r) {
-    (void)r;
+    int w, h;
+    renderer_get_size(r, &w, &h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+    glOrtho(0, w, h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glViewport(0, 0, w, h);
 }
 
 void renderer_end_ui(Renderer *r) {

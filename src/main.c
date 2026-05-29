@@ -128,6 +128,9 @@ static void game_handle_events(Game *g) {
             ui_toggle_store(&g->ui);
         }
         input_handle_event(&g->input, &e);
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
+            renderer_toggle_fullscreen(&g->renderer);
+        }
     }
 }
 
@@ -216,7 +219,7 @@ static void game_update(Game *g, float dt) {
         int tile_left = (int)(left / TILE_SIZE);
         int tile_right = (int)(right / TILE_SIZE);
         int tile_top = (int)(top / TILE_SIZE);
-        int tile_bottom = (int)((bottom - 1) / TILE_SIZE);
+        int tile_bottom = (int)(bottom / TILE_SIZE);
         
         g->player.on_ground = 0;
         
@@ -268,11 +271,7 @@ static void game_update(Game *g, float dt) {
             }
         }
         
-        int tile_below = (int)(g->player.y / TILE_SIZE);
-        int tx_center = (int)(g->player.x / TILE_SIZE);
-        if (!world_is_solid(&g->world, tx_center, tile_below)) {
-            g->player.on_ground = 0;
-        }
+
     }
     
     int px = (int)(g->player.x / TILE_SIZE);
@@ -302,7 +301,7 @@ static void game_update(Game *g, float dt) {
         mouse_wy /= TILE_SIZE;
         int dist_x = mouse_wx - px;
         int dist_y = mouse_wy - py;
-        if (dist_x * dist_x + dist_y * dist_y <= 9) {
+        if (dist_x * dist_x + dist_y * dist_y <= 36) {
             Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
             if (t && t->fg != BLOCK_AIR && t->fg != BLOCK_BEDROCK) {
                 if (g->player.breaking && g->player.break_x == mouse_wx && g->player.break_y == mouse_wy) {
@@ -356,7 +355,7 @@ static void game_update(Game *g, float dt) {
         mouse_wy /= TILE_SIZE;
         int dist_x = mouse_wx - px;
         int dist_y = mouse_wy - py;
-        if (dist_x * dist_x + dist_y * dist_y <= 9) {
+        if (dist_x * dist_x + dist_y * dist_y <= 36) {
             Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
             if (t && t->fg == BLOCK_AIR) {
                 int hotbar_slot = g->ui.hotbar_selection;
@@ -405,8 +404,10 @@ static void game_update(Game *g, float dt) {
 static void game_render(Game *g) {
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
-    int start_x = (int)(g->camera.x / TILE_SIZE) - 1;
-    int start_y = (int)(g->camera.y / TILE_SIZE) - 1;
+    float cam_left = g->camera.x - SCREEN_WIDTH / 2.0f;
+    float cam_top = g->camera.y - SCREEN_HEIGHT / 2.0f;
+    int start_x = (int)(cam_left / TILE_SIZE) - 1;
+    int start_y = (int)(cam_top / TILE_SIZE) - 1;
     int end_x = start_x + (SCREEN_WIDTH / TILE_SIZE) + 3;
     int end_y = start_y + (SCREEN_HEIGHT / TILE_SIZE) + 3;
     
@@ -497,9 +498,10 @@ static void game_render(Game *g) {
             if (t && t->fg != BLOCK_AIR) {
                 const char *name = block_get_name(t->fg);
                 if (name) {
-                    int tw = renderer_text_width(&g->renderer, name, 0.5f);
-                    renderer_draw_rect(&g->renderer, g->input.mouse_x - tw/2 - 4, g->input.mouse_y - 24, tw + 8, 20, 0.0f, 0.0f, 0.0f, 0.7f);
-                    renderer_draw_text(&g->renderer, name, g->input.mouse_x - tw/2, g->input.mouse_y - 22, 0.5f, 1.0f, 1.0f, 1.0f);
+                    int tw = renderer_text_width(&g->renderer, name, 2.0f);
+                    int th = 16;
+                    renderer_draw_rect(&g->renderer, g->input.mouse_x - tw/2 - 4, g->input.mouse_y - th - 8, tw + 8, th + 4, 0.0f, 0.0f, 0.0f, 0.8f);
+                    renderer_draw_text(&g->renderer, name, g->input.mouse_x - tw/2, g->input.mouse_y - th - 4, 2.0f, 1.0f, 1.0f, 1.0f);
                 }
             }
         }
@@ -509,7 +511,7 @@ static void game_render(Game *g) {
         ui_render_store_screen(&g->ui, &g->renderer, g->player.gems);
     }
     
-    renderer_draw_text(&g->renderer, "E: Inventory  B: Store  LMB: Break  RMB: Place  F5: Save  ESC: Quit", 8, SCREEN_HEIGHT - 20, 0.4f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(&g->renderer, "E: Inventory  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, SCREEN_HEIGHT - 20, 0.4f, 1.0f, 1.0f, 1.0f);
     
     renderer_end_ui(&g->renderer);
     

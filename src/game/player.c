@@ -13,7 +13,11 @@ void player_init(Player *p, float x, float y)
 
 void player_update(Player *p, float dt, int world_w, int world_h)
 {
-    p->vy += PLAYER_GRAVITY * dt;
+    if (!p->on_ground || p->vy < 0) {
+        p->vy += PLAYER_GRAVITY * dt;
+    }
+
+    if (p->vy > 800.0f) p->vy = 800.0f;
 
     p->x += p->vx * dt;
 
@@ -25,7 +29,6 @@ void player_update(Player *p, float dt, int world_w, int world_h)
 
     p->y += p->vy * dt;
 
-    p->on_ground = 0;
     if (p->y > world_h) {
         p->y = world_h;
         p->vy = 0;

@@ -13,6 +13,8 @@ typedef struct {
     unsigned int atlas_texture;
     int atlas_cols;
     int atlas_rows;
+    int fullscreen;
+    int windowed_x, windowed_y, windowed_w, windowed_h;
 } Renderer;
 
 int renderer_init(Renderer *r);
@@ -34,5 +36,9 @@ void renderer_end_ui(Renderer *r);
 
 unsigned int renderer_load_texture(const unsigned char *data, int width, int height, int channels);
 void renderer_generate_atlas(Renderer *r);
+
+void renderer_toggle_fullscreen(Renderer *r);
+int renderer_is_fullscreen(Renderer *r);
+void renderer_get_size(Renderer *r, int *w, int *h);
 
 #endif
