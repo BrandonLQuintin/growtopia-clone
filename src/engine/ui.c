@@ -80,7 +80,7 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
 
     if (ui->state == UI_STATE_STORE) {
         ensure_store();
-        int tab_w = 90;
+        int tab_w = 110;
         int tab_h = 28;
         int tabs_total = STORE_TAB_COUNT * tab_w;
         int tabs_x = (g_screen_w - tabs_total) / 2;
