@@ -15,6 +15,7 @@
 #include "game/player.h"
 #include "game/inventory.h"
 #include "game/farming.h"
+#include "game/crafting.h"
 #include "game/store.h"
 
 
@@ -357,13 +358,20 @@ static void game_update(Game *g, float dt) {
         int dist_y = mouse_wy - py;
         if (dist_x * dist_x + dist_y * dist_y <= 36) {
             Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
-            if (t && t->fg == BLOCK_AIR) {
+            if (t) {
                 int hotbar_slot = g->ui.hotbar_selection;
                 uint16_t held = inventory_get_hotbar_item(&g->inventory, hotbar_slot);
                 int held_count = inventory_get_hotbar_count(&g->inventory, hotbar_slot);
                 if (held != 0 && held_count > 0) {
                     const ItemDef *def = item_get_def(held);
-                    if (def) {
+                    if (def && def->is_seed && t->growth_stage >= GROWTH_STAGE_1 && t->growth_stage < GROWTH_COMPLETE) {
+                        uint16_t tile_seed = (uint16_t)t->extra_data;
+                        uint16_t result;
+                        if (crafting_splice(held, tile_seed, &result) == 0) {
+                            farming_plant_seed(&g->world, mouse_wx, mouse_wy, result);
+                            inventory_remove(&g->inventory, held, 1);
+                        }
+                    } else if (def && t->fg == BLOCK_AIR) {
                         if (def->is_seed) {
                             if (farming_can_plant(&g->world, mouse_wx, mouse_wy)) {
                                 farming_plant_seed(&g->world, mouse_wx, mouse_wy, held);
