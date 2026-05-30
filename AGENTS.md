@@ -33,7 +33,7 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 - `src/game/inventory.c` - 36-slot inventory with add/remove/swap/save/load
 - `src/game/farming.c` - Seed planting, growth tick, harvesting
 - `src/game/store.c` - Offline shop with 5 categories
-- `src/game/crafting.c` - Seed splice recipe table (17 recipes)
+- `src/game/crafting.c` - Seed splice recipe table (17 recipes, used by in-world splicing)
 
 ### Rendering
 
@@ -58,7 +58,7 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 
 - `UI_STATE_NONE` / `UI_STATE_INVENTORY` / `UI_STATE_STORE`
 - Slots have both click detection (`ui_update`) and rendering (`ui_render_*`) - positions MUST match
-- Seed splicing: when two seeds are clicked in inventory, `crafting_splice()` checks recipes
+- Seed splicing: hold a seed, right-click a growing plant (growth_stage 1-4) to splice via `crafting_splice()`
 
 ### Important Constants
 
