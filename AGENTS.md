@@ -70,6 +70,36 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 - Clothing IDs: 9100+ (Hat=9100, Shirt=9101, Pants=9102)
 - Gems ID: 9999
 
+## Code Review Workflow
+
+Before presenting any changes to the user, follow this review process:
+
+### 1. Spec Review (if a spec or plan exists)
+
+If changes were made based on a spec (`docs/superpowers/specs/`) or a written plan, summon a spec reviewer agent first. It should verify:
+
+- All requirements from the spec/plan are implemented
+- No spec items were missed or partially implemented
+- The implementation matches the spec's architecture and data flow
+- No contradictions between the spec and the actual code
+
+### 2. Code Review
+
+Summon a code reviewer agent to check the diff. It should verify:
+
+- `make clean && make` compiles with zero warnings (`-Wall -Wextra`)
+- No regressions in existing functionality
+- New code follows project conventions (see Coding Conventions above)
+- UI click detection positions match rendering positions (common bug source in this project)
+- Font scales are readable (1.0+ for any displayed text)
+- Collision/physics changes don't break player grounding or cause jitter
+- Save/load compatibility isn't broken by struct changes
+- No hardcoded `SCREEN_WIDTH`/`SCREEN_HEIGHT` - use `g_screen_w`/`g_screen_h`
+
+### 3. Present to User
+
+Only after both reviews pass (or issues are fixed), present the changes to the user.
+
 ## Coding Conventions
 
 - C11 standard, compiled with `-Wall -Wextra`
