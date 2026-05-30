@@ -35,9 +35,3 @@ int crafting_splice(uint16_t seed_a, uint16_t seed_b, uint16_t *result)
     return -1;
 }
 
-int crafting_get_recipes(Recipe **out_recipes, int *out_count)
-{
-    *out_recipes = recipes;
-    *out_count = (int)RECIPE_COUNT;
-    return 0;
-}

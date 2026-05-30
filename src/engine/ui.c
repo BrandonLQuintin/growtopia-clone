@@ -294,12 +294,6 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
             break;
         }
     }
-    
-    {
-        const char *hint = "Click 2 seeds to splice them!";
-        int hw = renderer_text_width(renderer, hint, 1.0f);
-        renderer_draw_text(renderer, hint, panel_x + (panel_w - hw) / 2, panel_y + panel_h + 6, 1.0f, 0.8f, 0.8f, 0.5f);
-    }
 }
 
 void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
