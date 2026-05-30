@@ -16,7 +16,7 @@
 #include "game/inventory.h"
 #include "game/farming.h"
 #include "game/store.h"
-#include "game/crafting.h"
+
 
 #define FPS_CAP 60
 #define FRAME_TIME (1000.0 / FPS_CAP)
@@ -172,24 +172,7 @@ static void game_update(Game *g, float dt) {
         
         if (g->ui.state == UI_STATE_INVENTORY && g->ui.drag_from_slot >= 0 && g->ui.selected_slot >= 0 &&
             g->ui.drag_from_slot != g->ui.selected_slot) {
-            int a = g->ui.drag_from_slot;
-            int b = g->ui.selected_slot;
-            uint16_t item_a = g->inventory.items[a];
-            uint16_t item_b = g->inventory.items[b];
-            
-            if (item_a != 0 && item_b != 0 &&
-                item_is_seed(item_a) && item_is_seed(item_b)) {
-                uint16_t result;
-                if (crafting_splice(item_a, item_b, &result) == 0) {
-                    inventory_remove(&g->inventory, item_a, 1);
-                    inventory_remove(&g->inventory, item_b, 1);
-                    inventory_add(&g->inventory, result, 1);
-                } else {
-                    inventory_swap_slots(&g->inventory, a, b);
-                }
-            } else {
-                inventory_swap_slots(&g->inventory, a, b);
-            }
+            inventory_swap_slots(&g->inventory, g->ui.drag_from_slot, g->ui.selected_slot);
             g->ui.drag_from_slot = -1;
         }
         
