@@ -107,6 +107,7 @@ static void game_init(Game *g) {
     camera_set_target(&g->camera, g->player.x, g->player.y);
     g->camera.x = g->camera.target_x;
     g->camera.y = g->camera.target_y;
+    renderer_generate_atlas(&g->renderer);
 }
 
 static void game_handle_events(Game *g) {
@@ -435,34 +436,28 @@ static void game_render(Game *g) {
             camera_world_to_screen(&g->camera, x * TILE_SIZE, y * TILE_SIZE, &sx, &sy);
             
             if (t->bg != BLOCK_AIR) {
-                int br, bg, bb;
-                block_get_color(t->bg, &br, &bg, &bb);
-                renderer_draw_rect(&g->renderer, sx, sy, TILE_SIZE, TILE_SIZE,
-                    br / 255.0f * 0.6f, bg / 255.0f * 0.6f, bb / 255.0f * 0.6f, 1.0f);
+                int sprite = block_get_sprite(t->bg);
+                renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
             }
             
             if (t->fg != BLOCK_AIR) {
+                int sprite = block_get_sprite(t->fg);
                 if (t->growth_stage > 0 && t->growth_stage < GROWTH_COMPLETE) {
-                    int r, gr, b;
-                    block_get_color(t->fg, &r, &gr, &b);
+                    int dirt_sprite = block_get_sprite(BLOCK_DIRT);
+                    renderer_draw_tile(&g->renderer, sx, sy, dirt_sprite, 0);
                     float height_factor = 0.3f + 0.7f * (t->growth_stage / (float)GROWTH_COMPLETE);
                     int draw_h = (int)(TILE_SIZE * height_factor);
-                    renderer_draw_rect(&g->renderer, sx, sy + TILE_SIZE - draw_h, TILE_SIZE, draw_h,
-                        r / 255.0f, gr / 255.0f, b / 255.0f, 1.0f);
+                    renderer_draw_tile_scaled(&g->renderer, sx, sy + TILE_SIZE - draw_h,
+                        TILE_SIZE, draw_h, sprite, 0);
                 } else if (t->growth_stage >= GROWTH_COMPLETE) {
-                    int r, gr, b;
-                    block_get_color(t->fg, &r, &gr, &b);
-                    renderer_draw_rect(&g->renderer, sx, sy, TILE_SIZE, TILE_SIZE,
-                        r / 255.0f, gr / 255.0f, b / 255.0f, 1.0f);
-                    int lr, lg, lb;
-                    block_get_color(BLOCK_LEAVES, &lr, &lg, &lb);
-                    renderer_draw_rect(&g->renderer, sx - 4, sy - 12, TILE_SIZE + 8, TILE_SIZE / 2 + 12,
-                        lr / 255.0f, lg / 255.0f, lb / 255.0f, 0.9f);
+                    renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
+                    int leaf_sprite = block_get_sprite(BLOCK_LEAVES);
+                    renderer_draw_tile_scaled(&g->renderer, sx - 4, sy - 12,
+                        TILE_SIZE + 8, TILE_SIZE / 2 + 12, leaf_sprite, 0);
+                    renderer_draw_tile_border(&g->renderer, sx, sy);
                 } else {
-                    int r, gr, b;
-                    block_get_color(t->fg, &r, &gr, &b);
-                    renderer_draw_rect(&g->renderer, sx, sy, TILE_SIZE, TILE_SIZE,
-                        r / 255.0f, gr / 255.0f, b / 255.0f, 1.0f);
+                    renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
+                    renderer_draw_tile_border(&g->renderer, sx, sy);
                 }
             }
         }
