@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "block_texture.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include <GL/gl.h>
@@ -815,17 +816,47 @@ void renderer_draw_rect(Renderer *r, int x, int y, int w, int h,
 
 void renderer_draw_tile(Renderer *r, int screen_x, int screen_y, int tile_id, int frame) {
     (void)frame;
-    float cr, cg, cb;
-    get_tile_color(tile_id, &cr, &cg, &cb);
-    renderer_draw_rect(r, screen_x, screen_y, TILE_SIZE, TILE_SIZE, cr, cg, cb, 1.0f);
+    if (r->atlas_texture == 0) {
+        float cr, cg, cb;
+        get_tile_color(tile_id, &cr, &cg, &cb);
+        renderer_draw_rect(r, screen_x, screen_y, TILE_SIZE, TILE_SIZE, cr, cg, cb, 1.0f);
+        return;
+    }
+    float u0, v0, u1, v1;
+    renderer_atlas_uv(tile_id, &u0, &v0, &u1, &v1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, r->atlas_texture);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glBegin(GL_QUADS);
+    glTexCoord2f(u0, v0); glVertex2f((float)screen_x, (float)screen_y);
+    glTexCoord2f(u1, v0); glVertex2f((float)(screen_x + TILE_SIZE), (float)screen_y);
+    glTexCoord2f(u1, v1); glVertex2f((float)(screen_x + TILE_SIZE), (float)(screen_y + TILE_SIZE));
+    glTexCoord2f(u0, v1); glVertex2f((float)screen_x, (float)(screen_y + TILE_SIZE));
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void renderer_draw_tile_scaled(Renderer *r, int screen_x, int screen_y, int w, int h,
                                 int tile_id, int frame) {
     (void)frame;
-    float cr, cg, cb;
-    get_tile_color(tile_id, &cr, &cg, &cb);
-    renderer_draw_rect(r, screen_x, screen_y, w, h, cr, cg, cb, 1.0f);
+    if (r->atlas_texture == 0) {
+        float cr, cg, cb;
+        get_tile_color(tile_id, &cr, &cg, &cb);
+        renderer_draw_rect(r, screen_x, screen_y, w, h, cr, cg, cb, 1.0f);
+        return;
+    }
+    float u0, v0, u1, v1;
+    renderer_atlas_uv(tile_id, &u0, &v0, &u1, &v1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, r->atlas_texture);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glBegin(GL_QUADS);
+    glTexCoord2f(u0, v0); glVertex2f((float)screen_x, (float)screen_y);
+    glTexCoord2f(u1, v0); glVertex2f((float)(screen_x + w), (float)screen_y);
+    glTexCoord2f(u1, v1); glVertex2f((float)(screen_x + w), (float)(screen_y + h));
+    glTexCoord2f(u0, v1); glVertex2f((float)screen_x, (float)(screen_y + h));
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void renderer_draw_text(Renderer *r, const char *text, int x, int y,
@@ -915,5 +946,19 @@ unsigned int renderer_load_texture(const unsigned char *data, int width, int hei
 }
 
 void renderer_generate_atlas(Renderer *r) {
-    (void)r;
+    r->atlas_cols = ATLAS_COLS;
+    unsigned char *atlas_buf = (unsigned char *)malloc(ATLAS_SIZE * ATLAS_SIZE * 4);
+    if (!atlas_buf) return;
+    block_texture_generate_atlas(atlas_buf);
+    r->atlas_texture = renderer_load_texture(atlas_buf, ATLAS_SIZE, ATLAS_SIZE, 4);
+    free(atlas_buf);
+}
+
+void renderer_atlas_uv(int sprite_id, float *u0, float *v0, float *u1, float *v1) {
+    int col = sprite_id % ATLAS_COLS;
+    int row = sprite_id / ATLAS_COLS;
+    *u0 = (float)(col * TILE_TEX_SIZE) / (float)ATLAS_SIZE;
+    *v0 = (float)(row * TILE_TEX_SIZE) / (float)ATLAS_SIZE;
+    *u1 = *u0 + (float)TILE_TEX_SIZE / (float)ATLAS_SIZE;
+    *v1 = *v0 + (float)TILE_TEX_SIZE / (float)ATLAS_SIZE;
 }

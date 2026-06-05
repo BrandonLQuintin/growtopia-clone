@@ -42,4 +42,6 @@ void renderer_toggle_fullscreen(Renderer *r);
 int renderer_is_fullscreen(Renderer *r);
 void renderer_get_size(Renderer *r, int *w, int *h);
 
+void renderer_atlas_uv(int sprite_id, float *u0, float *v0, float *u1, float *v1);
+
 #endif
