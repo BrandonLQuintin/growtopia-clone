@@ -781,6 +781,10 @@ int renderer_init(Renderer *r) {
 }
 
 void renderer_shutdown(Renderer *r) {
+    if (r->atlas_texture) {
+        glDeleteTextures(1, &r->atlas_texture);
+        r->atlas_texture = 0;
+    }
     if (r->gl_context) {
         SDL_GL_DeleteContext(r->gl_context);
         r->gl_context = NULL;
