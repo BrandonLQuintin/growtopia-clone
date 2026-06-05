@@ -443,10 +443,6 @@ static const struct {
 };
 #define TEX_DISPATCH_COUNT (sizeof(tex_dispatch) / sizeof(tex_dispatch[0]))
 
-void block_texture_init(void)
-{
-}
-
 void block_texture_generate(int sprite_id, unsigned char *buffer)
 {
     tex_default(buffer, TILE_TEX_SIZE);
