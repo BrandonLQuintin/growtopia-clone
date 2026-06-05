@@ -382,10 +382,15 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
         renderer_draw_rect(renderer, cx, cy, 1, SLOT_SIZE, 0.4f, 0.4f, 0.4f, 1.0f);
         renderer_draw_rect(renderer, cx + SLOT_SIZE - 1, cy, 1, SLOT_SIZE, 0.0f, 0.0f, 0.0f, 1.0f);
 
-        int cr, cg, cb;
-        item_get_color(entries[i].item_id, &cr, &cg, &cb);
-        renderer_draw_rect(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12,
-            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+        int sprite = block_get_sprite(entries[i].item_id);
+        if (sprite > 0) {
+            renderer_draw_tile_scaled(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12, sprite, 0);
+        } else {
+            int cr, cg, cb;
+            item_get_color(entries[i].item_id, &cr, &cg, &cb);
+            renderer_draw_rect(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12,
+                cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+        }
 
         const char *name = item_get_name(entries[i].item_id);
         if (name) {
