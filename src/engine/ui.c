@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "../game/store.h"
 #include "../game/player.h"
+#include "../world/block.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -160,11 +161,17 @@ static void render_slot_bg(Renderer *r, int x, int y, int size, int selected, in
 static void render_slot_item(Renderer *r, int x, int y, int size, int item_id, int count)
 {
     if (item_id == 0) return;
-    int cr, cg, cb;
-    item_get_color((uint16_t)item_id, &cr, &cg, &cb);
-    int pad = 6;
-    renderer_draw_rect(r, x + pad, y + pad, size - pad * 2, size - pad * 2,
-        cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    int sprite = block_get_sprite((uint16_t)item_id);
+    if (sprite > 0) {
+        int pad = 6;
+        renderer_draw_tile_scaled(r, x + pad, y + pad, size - pad * 2, size - pad * 2, sprite, 0);
+    } else {
+        int cr, cg, cb;
+        item_get_color((uint16_t)item_id, &cr, &cg, &cb);
+        int pad = 6;
+        renderer_draw_rect(r, x + pad, y + pad, size - pad * 2, size - pad * 2,
+            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    }
     if (count > 0) {
         char buf[16];
         snprintf(buf, sizeof(buf), "%d", count);
