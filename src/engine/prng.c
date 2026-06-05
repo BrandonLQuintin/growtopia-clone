@@ -8,7 +8,7 @@ void prng_seed(Prng *p, uint32_t seed)
 float prng_float(Prng *p)
 {
     p->state = p->state * 1664525u + 1013904223u;
-    return (float)(p->state >> 1) / (float)0x7FFFFFFFu;
+    return (float)p->state / (float)0x80000000u;
 }
 
 int prng_range(Prng *p, int min, int max)
