@@ -863,6 +863,18 @@ void renderer_draw_tile_scaled(Renderer *r, int screen_x, int screen_y, int w, i
     glDisable(GL_TEXTURE_2D);
 }
 
+void renderer_draw_tile_border(Renderer *r, int screen_x, int screen_y)
+{
+    (void)r;
+    glColor4f(0.0f, 0.0f, 0.0f, 0.15f);
+    glBegin(GL_LINES);
+    glVertex2f((float)screen_x, (float)(screen_y + TILE_SIZE));
+    glVertex2f((float)(screen_x + TILE_SIZE), (float)(screen_y + TILE_SIZE));
+    glVertex2f((float)(screen_x + TILE_SIZE), (float)screen_y);
+    glVertex2f((float)(screen_x + TILE_SIZE), (float)(screen_y + TILE_SIZE));
+    glEnd();
+}
+
 void renderer_draw_text(Renderer *r, const char *text, int x, int y,
                          float scale, float r_col, float g, float b_col) {
     int cx = x;
