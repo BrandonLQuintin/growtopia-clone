@@ -78,12 +78,15 @@ int interact_alloc_sign(World *w, int tx, int ty) {
     Tile *t = world_get_tile(w, tx, ty);
     if (!t || t->fg != BLOCK_SIGN) return 0;
     if (t->extra_data != 0) return (int)t->extra_data;
-    int slot = w->sign_count;
-    if (slot >= SIGN_TABLE_SIZE) return 0;
-    w->sign_texts[slot][0] = '\0';
-    w->sign_count++;
-    t->extra_data = (uint32_t)(slot + 1);
-    return (int)t->extra_data;
+    for (int i = 0; i < SIGN_TABLE_SIZE; i++) {
+        if (w->sign_texts[i][0] == '\0') {
+            w->sign_texts[i][0] = '\0';
+            t->extra_data = (uint32_t)(i + 1);
+            if (i >= w->sign_count) w->sign_count = i + 1;
+            return (int)t->extra_data;
+        }
+    }
+    return 0;
 }
 
 void interact_cleanup_break(World *w, int tx, int ty) {
