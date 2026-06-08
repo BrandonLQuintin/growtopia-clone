@@ -11,6 +11,8 @@ int world_init(World *w, int width, int height) {
     w->width = width;
     w->height = height;
     memset(w->name, 0, sizeof(w->name));
+    memset(w->sign_texts, 0, sizeof(w->sign_texts));
+    w->sign_count = 0;
     return 0;
 }
 
@@ -19,6 +21,8 @@ void world_free(World *w) {
     w->tiles = NULL;
     w->width = 0;
     w->height = 0;
+    memset(w->sign_texts, 0, sizeof(w->sign_texts));
+    w->sign_count = 0;
 }
 
 void world_generate(World *w) {
