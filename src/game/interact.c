@@ -55,6 +55,22 @@ int interact_wrench(World *w, int tx, int ty, int *pending_x, int *pending_y, in
             }
             uint32_t link_a = ((uint32_t)(tx + 1) << 16) | (uint32_t)(ty + 1);
             uint32_t link_b = ((uint32_t)(*pending_x + 1) << 16) | (uint32_t)(*pending_y + 1);
+            if (a->extra_data != PORTAL_UNLINKED) {
+                int opx = ((int)(a->extra_data >> 16)) - 1;
+                int opy = ((int)(a->extra_data & 0xFFFF)) - 1;
+                if (opx >= 0 && opx < w->width && opy >= 0 && opy < w->height) {
+                    Tile *op = world_get_tile(w, opx, opy);
+                    if (op) op->extra_data = PORTAL_UNLINKED;
+                }
+            }
+            if (t->extra_data != PORTAL_UNLINKED) {
+                int opx = ((int)(t->extra_data >> 16)) - 1;
+                int opy = ((int)(t->extra_data & 0xFFFF)) - 1;
+                if (opx >= 0 && opx < w->width && opy >= 0 && opy < w->height) {
+                    Tile *op = world_get_tile(w, opx, opy);
+                    if (op) op->extra_data = PORTAL_UNLINKED;
+                }
+            }
             a->extra_data = link_a;
             t->extra_data = link_b;
             *pending = 0;
@@ -80,7 +96,6 @@ int interact_alloc_sign(World *w, int tx, int ty) {
     if (t->extra_data != 0) return (int)t->extra_data;
     for (int i = 0; i < SIGN_TABLE_SIZE; i++) {
         if (w->sign_texts[i][0] == '\0') {
-            w->sign_texts[i][0] = '\0';
             t->extra_data = (uint32_t)(i + 1);
             if (i >= w->sign_count) w->sign_count = i + 1;
             return (int)t->extra_data;
