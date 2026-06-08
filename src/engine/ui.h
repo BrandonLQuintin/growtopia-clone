@@ -5,6 +5,7 @@
 #include "renderer.h"
 #include "input.h"
 #include "../world/items.h"
+#include "../world/world.h"
 
 #define UI_MAX_BUTTONS 128
 #define UI_MAX_SLOTS 64
@@ -13,7 +14,8 @@ typedef enum {
     UI_STATE_NONE,
     UI_STATE_INVENTORY,
     UI_STATE_STORE,
-    UI_STATE_CRAFTING
+    UI_STATE_CRAFTING,
+    UI_STATE_SIGN_EDIT
 } UIState;
 
 typedef struct {
@@ -46,6 +48,10 @@ typedef struct {
     int store_category;
     int store_scroll;
     int inventory_scroll;
+    int sign_edit_x, sign_edit_y;
+    char sign_edit_text[SIGN_TEXT_MAX_LEN + 1];
+    int sign_edit_cursor;
+    float sign_edit_cursor_timer;
 } UI;
 
 void ui_init(UI *ui);
@@ -60,6 +66,11 @@ void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *h
 void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size);
 void ui_render_store_screen(UI *ui, Renderer *renderer, int gems);
 void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health);
+
+void ui_init_sign_edit(UI *ui, World *w, int tx, int ty);
+void ui_finish_sign_edit(UI *ui, World *w);
+void ui_render_sign_edit(UI *ui, Renderer *renderer);
+void ui_update_sign_edit(UI *ui, Input *input);
 
 int ui_get_hotbar_selection(UI *ui);
 

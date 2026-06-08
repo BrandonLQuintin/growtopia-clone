@@ -2,6 +2,8 @@
 #include "../game/store.h"
 #include "../game/player.h"
 #include "../world/block.h"
+#include "../world/world.h"
+#include "../game/interact.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -452,4 +454,72 @@ void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health)
     char gem_buf[16];
     snprintf(gem_buf, sizeof(gem_buf), "%d", gems);
     renderer_draw_text(renderer, gem_buf, gem_x + gem_size + 8, gem_y + 2, 2.0f, 1.0f, 0.9f, 0.0f);
+}
+
+void ui_init_sign_edit(UI *ui, World *w, int tx, int ty) {
+    ui->state = UI_STATE_SIGN_EDIT;
+    ui->sign_edit_x = tx;
+    ui->sign_edit_y = ty;
+    memset(ui->sign_edit_text, 0, sizeof(ui->sign_edit_text));
+    ui->sign_edit_cursor = 0;
+    ui->sign_edit_cursor_timer = 0;
+    const char *existing = interact_get_sign_text(w, tx, ty);
+    if (existing) {
+        int len = (int)strlen(existing);
+        if (len > SIGN_TEXT_MAX_LEN) len = SIGN_TEXT_MAX_LEN;
+        memcpy(ui->sign_edit_text, existing, len);
+        ui->sign_edit_cursor = len;
+    }
+}
+
+void ui_finish_sign_edit(UI *ui, World *w) {
+    Tile *t = world_get_tile(w, ui->sign_edit_x, ui->sign_edit_y);
+    if (!t || t->fg != BLOCK_SIGN) {
+        ui->state = UI_STATE_NONE;
+        return;
+    }
+    if (ui->sign_edit_text[0] != '\0') {
+        int idx = interact_alloc_sign(w, ui->sign_edit_x, ui->sign_edit_y);
+        if (idx > 0) {
+            memcpy(w->sign_texts[idx - 1], ui->sign_edit_text, SIGN_TEXT_MAX_LEN + 1);
+        }
+    } else {
+        if (t->extra_data != 0) {
+            int idx = (int)t->extra_data - 1;
+            if (idx >= 0 && idx < SIGN_TABLE_SIZE) {
+                memset(w->sign_texts[idx], 0, SIGN_TEXT_MAX_LEN + 1);
+            }
+            t->extra_data = 0;
+        }
+    }
+    ui->state = UI_STATE_NONE;
+}
+
+void ui_update_sign_edit(UI *ui, Input *input) {
+    (void)input;
+    ui->sign_edit_cursor_timer += 1.0f / 60.0f;
+    if (ui->sign_edit_cursor_timer >= 1.0f) ui->sign_edit_cursor_timer -= 1.0f;
+}
+
+void ui_render_sign_edit(UI *ui, Renderer *renderer) {
+    int panel_w = 300;
+    int panel_h = 120;
+    int px = (g_screen_w - panel_w) / 2;
+    int py = (g_screen_h - panel_h) / 2;
+
+    renderer_draw_rect(renderer, px, py, panel_w, panel_h, 0.0f, 0.0f, 0.0f, 0.85f);
+
+    renderer_draw_text(renderer, "Edit Sign", px + 10, py + 8, 2.0f, 1.0f, 1.0f, 1.0f);
+
+    renderer_draw_rect(renderer, px + 19, py + 39, 262, 32, 0.6f, 0.6f, 0.6f, 1.0f);
+    renderer_draw_rect(renderer, px + 20, py + 40, 260, 30, 0.15f, 0.15f, 0.15f, 1.0f);
+
+    renderer_draw_text(renderer, ui->sign_edit_text, px + 24, py + 44, 1.5f, 1.0f, 1.0f, 1.0f);
+
+    if (ui->sign_edit_cursor_timer < 0.5f) {
+        int text_w = renderer_text_width(renderer, ui->sign_edit_text, 1.5f);
+        renderer_draw_rect(renderer, px + 24 + text_w, py + 42, 2, 24, 1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    renderer_draw_text(renderer, "Enter: Save  Esc: Cancel", px + 20, py + 90, 1.0f, 0.7f, 0.7f, 0.7f);
 }
