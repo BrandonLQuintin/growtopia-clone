@@ -372,7 +372,6 @@ static void game_update(Game *g, float dt) {
             if (t && t->fg != BLOCK_AIR && t->fg != BLOCK_BEDROCK) {
                 int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
                 if (block_is_interactive(t->fg) && tool_id != ITEM_PICKAXE) {
-                    /* skip */
                 } else if (g->player.breaking && g->player.break_x == mouse_wx && g->player.break_y == mouse_wy) {
                     g->player.break_timer += (int)(dt * 1000);
                     int break_time = block_get_break_time(t->fg);
