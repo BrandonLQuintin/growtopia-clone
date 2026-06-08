@@ -67,9 +67,11 @@ Functions:
 - `interact_punch(World*, Player*, int tx, int ty)` -- handles left-click on interactive blocks (door toggle, sign read, portal teleport)
 - `interact_wrench(World*, UI*, int tx, int ty)` -- handles wrench click on interactive blocks (sign edit, portal link)
 - `interact_get_sign_text(World*, int tx, int ty)` -- returns const char* to sign text at tile, or NULL
-- `interact_alloc_sign(World*, int tx, int ty)` -- finds or allocates a sign text slot, returns index
+- `interact_alloc_sign(World*, int tx, int ty)` -- finds or allocates a sign text slot, returns 1-based index (1-64) stored in extra_data; internally accesses sign_texts[index-1]; returns 0 on failure (all slots used)
 - `interact_link_portals(World*, int x1, int y1, int x2, int y2)` -- bidirectional link
-- `interact_is_portal_linked(World*, int tx, int ty)` -- returns 1 if extra_data != 0 (unlinked)
+- `interact_is_portal_linked(World*, int tx, int ty)` -- returns 1 if extra_data != 0 (linked)
+- `interact_cleanup_break(World*, int tx, int ty)` -- handles sign text deallocation and portal unlinking when an interactive block is broken
+- `block_is_interactive(uint16_t block_id)` -- returns 1 if block_id is BLOCK_DOOR, BLOCK_SIGN, or BLOCK_PORTAL
 
 ## Changes to Existing Modules
 
@@ -78,24 +80,33 @@ Functions:
 - Add `block_is_solid_with_data(uint16_t block_id, uint32_t extra_data)` that checks door state
 - Existing `block_is_solid` continues to work for non-interactive blocks (returns static is_solid value)
 - Door's static `is_solid` in BLOCK_DEFS changes to 1 (closed by default)
+- `world_is_solid` in world.c must be updated to call `block_is_solid_with_data` instead of `block_is_solid`, reading the tile's extra_data for the solidity check
+- The collision loop in main.c (line 230) already calls `world_is_solid`, so updating that function to be tile-aware is sufficient -- no change needed in main.c collision code
 
 ### world.c/h
 
 - World struct gains `sign_texts` array: `char sign_texts[64][33]`
 - World struct gains `int sign_count` tracking how many slots are used
 - `world_save`: append sign data after tile array, bump version to 2
-- `world_load`: detect version, load sign data if version >= 2, default empty if version 1
+- `world_load`: detect version, change version check from `!= 1` to `> 2` to accept both v1 and v2, load sign data if version >= 2, default empty if version 1
 - New save format: `GROW | version(2) | width | height | tiles[] | sign_count | sign_texts[sign_count][]`
 - Backward compatible: version 1 loads fine, signs default to empty
 
 ### ui.c/h
 
-- Add `UI_STATE_SIGN_EDIT` to UIState enum (value 3)
-- UI struct gains: `int sign_edit_x, sign_edit_y` (target sign tile coords), `char sign_edit_text[33]` (editing buffer)
-- Sign edit rendering: centered panel with text input field, cursor blinking, "Enter to save / Esc to cancel" prompt
-- Sign edit update: capture keyboard input (letters, numbers, backspace, enter, escape)
-- `ui_init_sign_edit(UI*, World*, int tx, int ty)` populates edit buffer with existing sign text
-- `ui_finish_sign_edit(UI*, World*)` writes buffer back to world sign table and closes UI
+- Add `UI_STATE_SIGN_EDIT` to UIState enum (value 4, after existing CRAFTING=3)
+- UI struct gains: `int sign_edit_x, sign_edit_y` (target sign tile coords), `char sign_edit_text[33]` (editing buffer), `int sign_edit_cursor` (character position), `float sign_edit_cursor_timer` (blink timer, 500ms interval)
+- Sign edit rendering layout:
+  - Panel: 300x120 pixels, centered on screen (`(g_screen_w - 300) / 2, (g_screen_h - 120) / 2`)
+  - Dark semi-transparent background (0,0,0,0.85)
+  - Title "Edit Sign" at top (x+10, y+8), font scale 2.0f
+  - Text field: x+20, y+40, width 260, height 30, dark gray background (0.2,0.2,0.2,1.0), light border (0.6,0.6,0.6,1.0)
+  - Text content rendered inside field at (x+24, y+44), font scale 1.5f, max 21 visible characters at this scale
+  - Cursor: 2px wide white vertical bar at end of text position, blinking (visible for 500ms, hidden for 500ms)
+  - Prompt "Enter: Save  Esc: Cancel" at (x+20, y+90), font scale 1.0f
+- Sign edit update: capture keyboard input (A-Z, a-z, 0-9, space, punctuation from bitmap font, backspace, enter, escape)
+- `ui_init_sign_edit(UI*, World*, int tx, int ty)` populates edit buffer with existing sign text, resets cursor
+- `ui_finish_sign_edit(UI*, World*)` writes buffer back to world sign table and closes UI to UI_STATE_NONE
 
 ### main.c
 
@@ -169,18 +180,50 @@ UI_STATE_SIGN_EDIT active
 
 Version 1 (current): `GROW(4) | version=1(4) | width(4) | height(4) | tiles[width*height]`
 
-Version 2 (new): `GROW(4) | version=2(4) | width(4) | height(4) | tiles[width*height] | sign_count(4) | sign_texts[sign_count](sign_count * 33)`
+Version 2 (new): `GROW(4) | version=2(4) | width(4) | height(4) | tiles[width*height] | sign_count(4, uint32_t) | sign_texts[sign_count](sign_count * 33 fixed bytes per entry)`
 
 Loading logic: read version, if 1 then sign_count = 0 (no sign data follows), if 2 then read sign_count and sign_texts array.
 
 ## Edge Cases
 
-- Breaking a door/sign/portal with LMB hold while not clicking: should still be breakable by holding LMB. The punch interaction only fires on click (not hold). On the first frame of clicking an interactive block, the interaction fires. If the player keeps holding, breaking starts normally. This means `interact_punch` is called once on click, and breaking only proceeds if the player keeps holding past the interaction frame.
-- Breaking interactive blocks: When punching an interactive block (LMB), the interaction fires immediately on click (door toggle, sign read, portal teleport). The block is never broken by punching. To remove an interactive block, the player must hold the Pickaxe tool and left-click-hold on it, which triggers normal break progress (no interaction fires). The wrench does not break blocks.
+- Breaking a door/sign/portal: See the detailed mechanic above. Summary: click fires interaction, hold with Pickaxe breaks.
+- Breaking interactive blocks: The punch interaction fires on `input_is_mouse_clicked(button 1)` (first frame only). If the player holds the Pickaxe tool and continues holding LMB, break progress proceeds via `input_is_mouse_down` on subsequent frames -- the interaction does NOT fire again. If no Pickaxe is held, holding LMB on an interactive block does nothing beyond the initial interaction. The wrench does not break blocks. Implementation: in the break handler, check `input_is_mouse_clicked` for interactive block dispatch, then check `input_is_mouse_down` for break progress only if player holds Pickaxe and target is an interactive block.
 - Portal linking to itself: rejected (no-op)
 - Portal linking to non-portal tile: rejected (no-op)
 - Sign text buffer full (64 signs): reject new sign text allocation, wrench click shows no effect
 - World with version 1 save: loads fine, all interactive blocks work with empty/default state (doors closed, signs empty, portals unlinked)
+
+## Cleanup on Break
+
+When an interactive block is broken (fg set to BLOCK_AIR), cleanup must occur:
+
+- **Sign**: if `extra_data != 0`, clear `sign_texts[extra_data - 1]` to empty string and set tile's `extra_data = 0`
+- **Portal**: if linked (`extra_data != 0`), decode partner coordinates `(px, py)` from the breaking tile's extra_data, then set the partner tile's `extra_data = 0` (unlink partner bidirectionally), then set breaking tile's `extra_data = 0`
+- **Door**: no cleanup needed (no external state)
+
+This cleanup is called from `interact_cleanup_break(World*, tx, ty)` in the break completion code in main.c, after the tile fg is set to BLOCK_AIR.
+
+## Sign Text Overlay
+
+Game struct gains: `float sign_overlay_timer`, `int sign_overlay_x`, `int sign_overlay_y`, `int sign_overlay_active`
+
+When `interact_punch` is called on a sign:
+1. Set `game.sign_overlay_x = tx`, `game.sign_overlay_y = ty`
+2. Set `game.sign_overlay_timer = 3.0f` (3 seconds)
+3. Set `game.sign_overlay_active = 1`
+
+In `game_update`: decrement `sign_overlay_timer` by dt, set `sign_overlay_active = 0` when timer reaches 0.
+
+In `game_render` (after tile rendering, before UI): if `sign_overlay_active`, get sign text via `interact_get_sign_text`, convert sign tile world position to screen coordinates, render text above the tile:
+- Background: semi-transparent black box (0,0,0,0.8) centered above the tile, sized to fit text
+- Text: font scale 1.5f, white color, positioned so text is centered horizontally above the tile
+
+## Sign Edit Key Handling in main.c
+
+In `game_handle_events`, add special handling for `UI_STATE_SIGN_EDIT`:
+- Enter key: call `ui_finish_sign_edit(&ui, &world)` to save text and close
+- Escape key: already handled by the generic `ui_close_all` at line 119-122 (discards changes)
+- Other keys are captured by `ui_update` during the sign edit state
 
 ## Constants
 
@@ -203,4 +246,4 @@ INTERACTIVE_BLOCKS: BLOCK_DOOR, BLOCK_SIGN, BLOCK_PORTAL
 - `src/engine/ui.h` -- UI_STATE_SIGN_EDIT, new struct fields
 - `src/engine/block_texture.c` -- door/sign/portal textures
 - `src/main.c` -- interaction dispatch in punch/wrench handlers, sign overlay, portal link state
-- `Makefile` -- add interact.o to build
+- `Makefile` -- no change needed; `$(wildcard $(SRCDIR)/**/*.c)` auto-discovers new files
