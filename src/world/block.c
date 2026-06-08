@@ -11,7 +11,7 @@ const BlockDef BLOCK_DEFS[] = {
     {BLOCK_WOOD, "Wood", 1, 0, 600, 2, BLOCK_WOOD, 1, SEED_WOOD, 5, 160, 110, 50},
     {BLOCK_WOOD_BG, "Wood Background", 0, 1, 300, 1, BLOCK_WOOD_BG, 1, 0, 6, 180, 140, 80},
     {BLOCK_LEAVES, "Leaves", 0, 0, 200, 1, SEED_LEAVES, 1, SEED_LEAVES, 7, 30, 130, 30},
-    {BLOCK_DOOR, "Door", 0, 0, 500, 2, BLOCK_DOOR, 1, 0, 8, 160, 110, 50},
+    {BLOCK_DOOR, "Door", 1, 0, 500, 2, BLOCK_DOOR, 1, 0, 8, 160, 110, 50},
     {BLOCK_BRICK, "Brick", 1, 0, 800, 3, BLOCK_BRICK, 1, SEED_BRICK, 9, 180, 80, 50},
     {BLOCK_GLASS, "Glass", 1, 0, 100, 2, 0, 0, 0, 10, 200, 220, 255},
     {BLOCK_SAND, "Sand", 1, 0, 400, 1, BLOCK_SAND, 1, SEED_SAND, 11, 210, 190, 130},
@@ -122,4 +122,16 @@ void block_get_color(uint16_t block_id, int *r, int *g, int *b) {
 int block_get_sprite(uint16_t block_id) {
     const BlockDef *b = block_find(block_id);
     return b ? b->tile_sprite_id : 0;
+}
+
+int block_is_solid_with_data(uint16_t block_id, uint32_t extra_data) {
+    if (block_id == BLOCK_AIR) return 0;
+    if (block_id == BLOCK_DOOR) {
+        return !(extra_data & 1);
+    }
+    return block_is_solid(block_id);
+}
+
+int block_is_interactive(uint16_t block_id) {
+    return block_id == BLOCK_DOOR || block_id == BLOCK_SIGN || block_id == BLOCK_PORTAL;
 }

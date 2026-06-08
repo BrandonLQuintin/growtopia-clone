@@ -27,6 +27,8 @@ uint16_t block_get_seed(uint16_t block_id);
 const char *block_get_name(uint16_t block_id);
 void block_get_color(uint16_t block_id, int *r, int *g, int *b);
 int block_get_sprite(uint16_t block_id);
+int block_is_solid_with_data(uint16_t block_id, uint32_t extra_data);
+int block_is_interactive(uint16_t block_id);
 
 extern const BlockDef BLOCK_DEFS[];
 extern const int BLOCK_DEF_COUNT;
