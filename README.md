@@ -6,14 +6,14 @@ An offline 2D sandbox game inspired by Growtopia, built in C with SDL2 and OpenG
 
 - **2D tile-based world** with procedural generation (caves, trees, terrain layers)
 - **Block breaking/placing** with break progress animation
-- **30+ block types** with unique colors and properties
+- **30+ block types** with unique procedural pixel-art textures and properties
 - **17 seed types** for farming with growth stages and harvest mechanics
 - **Seed splicing** - combine two seeds in inventory to create new seed types (17 recipes)
 - **Offline store** with 5 categories (Blocks, Seeds, Tools, Clothing, Special)
 - **Full inventory** (36 slots) with click-to-swap and hotbar
 - **World/inventory/player save/load** to binary files with auto-save
 - **Resizable window** and fullscreen support
-- **Procedural colored blocks** - no external texture assets needed
+- **Procedural pixel-art textures** - generated at startup, no external image files needed
 
 ## Controls
 
@@ -85,10 +85,12 @@ make clean
 src/
   main.c              Game loop, input handling, rendering
   engine/
-    renderer.h/c      OpenGL init, drawing primitives, bitmap font
+    renderer.h/c      OpenGL init, drawing primitives, bitmap font, texture atlas
     camera.h/c        2D camera with smooth follow
     input.h/c         Keyboard/mouse state tracking
     ui.h/c            HUD, inventory, and store screen rendering
+    block_texture.h/c Procedural 32x32 pixel-art block textures
+    prng.h/c          Seeded deterministic PRNG
   world/
     world.h/c         World grid, save/load, procedural generation
     block.h/c         Block type definitions and properties
