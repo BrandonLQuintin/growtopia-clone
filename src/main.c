@@ -17,6 +17,7 @@
 #include "game/farming.h"
 #include "game/crafting.h"
 #include "game/store.h"
+#include "game/interact.h"
 
 
 #define FPS_CAP 60
@@ -25,6 +26,8 @@
 #define WORLD_PATH "res/worlds/main.wld"
 #define INVENTORY_PATH "res/worlds/main.inv"
 #define PLAYER_PATH "res/worlds/main.player"
+#define ITEM_WRENCH 9000
+#define ITEM_PICKAXE 9001
 
 static int g_running = 1;
 
@@ -39,6 +42,11 @@ typedef struct {
     Store store;
     float autosave_timer;
     int break_progress;
+    float sign_overlay_timer;
+    int sign_overlay_x, sign_overlay_y;
+    int sign_overlay_active;
+    int portal_link_pending;
+    int portal_link_x, portal_link_y;
     uint64_t last_time;
 } Game;
 
@@ -80,6 +88,8 @@ static void game_init(Game *g) {
         fprintf(stderr, "Failed to init renderer\n");
         exit(1);
     }
+    
+    SDL_StartTextInput();
     
     input_init(&g->input);
     ui_init(&g->ui);
@@ -133,6 +143,26 @@ static void game_handle_events(Game *g) {
         if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
             renderer_toggle_fullscreen(&g->renderer);
         }
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
+            if (g->ui.state == UI_STATE_SIGN_EDIT) {
+                ui_finish_sign_edit(&g->ui, &g->world);
+            }
+        }
+        if (e.type == SDL_TEXTINPUT && g->ui.state == UI_STATE_SIGN_EDIT) {
+            if (g->ui.sign_edit_cursor < SIGN_TEXT_MAX_LEN) {
+                int len = (int)strlen(e.text.text);
+                if (len > 0 && g->ui.sign_edit_cursor + len <= SIGN_TEXT_MAX_LEN) {
+                    g->ui.sign_edit_text[g->ui.sign_edit_cursor] = e.text.text[0];
+                    g->ui.sign_edit_cursor++;
+                }
+            }
+        }
+        if (e.type == SDL_KEYDOWN && g->ui.state == UI_STATE_SIGN_EDIT) {
+            if (e.key.keysym.sym == SDLK_BACKSPACE && g->ui.sign_edit_cursor > 0) {
+                g->ui.sign_edit_cursor--;
+                g->ui.sign_edit_text[g->ui.sign_edit_cursor] = '\0';
+            }
+        }
     }
 }
 
@@ -176,6 +206,10 @@ static void game_update(Game *g, float dt) {
             g->ui.drag_from_slot != g->ui.selected_slot) {
             inventory_swap_slots(&g->inventory, g->ui.drag_from_slot, g->ui.selected_slot);
             g->ui.drag_from_slot = -1;
+        }
+        
+        if (g->ui.state == UI_STATE_SIGN_EDIT) {
+            ui_update_sign_edit(&g->ui, &g->input);
         }
         
         input_update(&g->input);
@@ -296,6 +330,36 @@ static void game_update(Game *g, float dt) {
     int facing_x, facing_y;
     player_get_facing_tile(&g->player, &facing_x, &facing_y);
     
+    if (input_is_mouse_clicked(&g->input, 1)) {
+        int mouse_wx, mouse_wy;
+        camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
+        mouse_wx /= TILE_SIZE;
+        mouse_wy /= TILE_SIZE;
+        int dist_x = mouse_wx - px;
+        int dist_y = mouse_wy - py;
+        if (dist_x * dist_x + dist_y * dist_y <= 36) {
+            Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
+            if (t && block_is_interactive(t->fg)) {
+                int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
+                if (tool_id != ITEM_PICKAXE) {
+                    int result = interact_punch(&g->world, &g->player, mouse_wx, mouse_wy);
+                    if (result == 2) {
+                        const char *txt = interact_get_sign_text(&g->world, mouse_wx, mouse_wy);
+                        if (txt) {
+                            g->sign_overlay_active = 1;
+                            g->sign_overlay_timer = 3.0f;
+                            g->sign_overlay_x = mouse_wx;
+                            g->sign_overlay_y = mouse_wy;
+                        }
+                    }
+                    g->player.breaking = 0;
+                    g->player.break_timer = 0;
+                    goto skip_break;
+                }
+            }
+        }
+    }
+
     if (input_is_mouse_down(&g->input, 1)) {
         int mouse_wx, mouse_wy;
         camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
@@ -306,10 +370,12 @@ static void game_update(Game *g, float dt) {
         if (dist_x * dist_x + dist_y * dist_y <= 36) {
             Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
             if (t && t->fg != BLOCK_AIR && t->fg != BLOCK_BEDROCK) {
-                if (g->player.breaking && g->player.break_x == mouse_wx && g->player.break_y == mouse_wy) {
+                int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
+                if (block_is_interactive(t->fg) && tool_id != ITEM_PICKAXE) {
+                    /* skip */
+                } else if (g->player.breaking && g->player.break_x == mouse_wx && g->player.break_y == mouse_wy) {
                     g->player.break_timer += (int)(dt * 1000);
                     int break_time = block_get_break_time(t->fg);
-                    int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
                     int power = item_get_tool_power(tool_id);
                     if (power > 0) {
                         g->player.break_timer += (int)(power * dt * 1000);
@@ -331,9 +397,11 @@ static void game_update(Game *g, float dt) {
                             int gem_drop = 1 + (rand() % 3);
                             g->player.gems += gem_drop;
                         }
+                        interact_cleanup_break(&g->world, mouse_wx, mouse_wy);
                         t->fg = BLOCK_AIR;
                         t->growth_stage = 0;
                         t->growth_timer = 0;
+                        t->extra_data = 0;
                         g->player.breaking = 0;
                         g->player.break_timer = 0;
                     }
@@ -349,6 +417,7 @@ static void game_update(Game *g, float dt) {
         g->player.breaking = 0;
         g->player.break_timer = 0;
     }
+    skip_break:
     
     if (input_is_mouse_clicked(&g->input, 3)) {
         int mouse_wx, mouse_wy;
@@ -363,6 +432,17 @@ static void game_update(Game *g, float dt) {
                 int hotbar_slot = g->ui.hotbar_selection;
                 uint16_t held = inventory_get_hotbar_item(&g->inventory, hotbar_slot);
                 int held_count = inventory_get_hotbar_count(&g->inventory, hotbar_slot);
+
+                if (held == ITEM_WRENCH && t->fg != BLOCK_AIR) {
+                    int result = interact_wrench(&g->world, mouse_wx, mouse_wy,
+                        &g->portal_link_x, &g->portal_link_y, &g->portal_link_pending);
+                    if (result == 1) {
+                        ui_init_sign_edit(&g->ui, &g->world, mouse_wx, mouse_wy);
+                    }
+                    input_update(&g->input);
+                    return;
+                }
+
                 if (held != 0 && held_count > 0) {
                     const ItemDef *def = item_get_def(held);
                     if (def && def->is_seed && t->growth_stage >= GROWTH_STAGE_1 && t->growth_stage < GROWTH_COMPLETE) {
@@ -380,6 +460,7 @@ static void game_update(Game *g, float dt) {
                             }
                         } else if (def->category == ITEM_CAT_BLOCK) {
                             t->fg = held;
+                            t->extra_data = 0;
                             inventory_remove(&g->inventory, held, 1);
                         }
                     }
@@ -400,6 +481,13 @@ static void game_update(Game *g, float dt) {
     
     camera_set_target(&g->camera, g->player.x, g->player.y);
     camera_update(&g->camera, dt);
+    
+    if (g->sign_overlay_active) {
+        g->sign_overlay_timer -= dt;
+        if (g->sign_overlay_timer <= 0) {
+            g->sign_overlay_active = 0;
+        }
+    }
     
     g->autosave_timer -= dt;
     if (g->autosave_timer <= 0) {
@@ -458,6 +546,11 @@ static void game_render(Game *g) {
                 } else {
                     renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
                     renderer_draw_tile_border(&g->renderer, sx, sy);
+                    if (t->fg == BLOCK_PORTAL) {
+                        float pulse = 0.5f + 0.5f * sinf((float)SDL_GetTicks() / 300.0f);
+                        renderer_draw_rect(&g->renderer, sx, sy, TILE_SIZE, TILE_SIZE,
+                            0.6f * pulse, 0.2f * pulse, 0.9f * pulse, 0.3f);
+                    }
                 }
             }
         }
@@ -508,10 +601,25 @@ static void game_render(Game *g) {
                 }
             }
         }
+        if (g->sign_overlay_active) {
+            const char *txt = interact_get_sign_text(&g->world, g->sign_overlay_x, g->sign_overlay_y);
+            if (txt) {
+                int sox, soy;
+                camera_world_to_screen(&g->camera, g->sign_overlay_x * TILE_SIZE, g->sign_overlay_y * TILE_SIZE, &sox, &soy);
+                int tw = renderer_text_width(&g->renderer, txt, 1.5f);
+                int th = 16;
+                int label_x = sox + TILE_SIZE / 2 - tw / 2;
+                int label_y = soy - th - 8;
+                renderer_draw_rect(&g->renderer, label_x - 4, label_y - 2, tw + 8, th + 6, 0.0f, 0.0f, 0.0f, 0.8f);
+                renderer_draw_text(&g->renderer, txt, label_x, label_y, 1.5f, 1.0f, 1.0f, 1.0f);
+            }
+        }
     } else if (g->ui.state == UI_STATE_INVENTORY) {
         ui_render_inventory_screen(&g->ui, &g->renderer, g->inventory.items, g->inventory.counts, INVENTORY_SIZE);
     } else if (g->ui.state == UI_STATE_STORE) {
         ui_render_store_screen(&g->ui, &g->renderer, g->player.gems);
+    } else if (g->ui.state == UI_STATE_SIGN_EDIT) {
+        ui_render_sign_edit(&g->ui, &g->renderer);
     }
     
     renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
