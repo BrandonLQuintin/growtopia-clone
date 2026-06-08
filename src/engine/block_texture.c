@@ -379,6 +379,79 @@ static void tex_cloth_bg(unsigned char *buf, int size)
     }
 }
 
+static void tex_door(unsigned char *buf, int size)
+{
+    Prng p;
+    prng_seed(&p, 888);
+    px_fill(buf, size, 160, 110, 50, 255);
+    for (int y = 0; y < size; y++) {
+        px_set(buf, size, 2, y, 130, 85, 35, 255);
+        px_set(buf, size, 3, y, 130, 85, 35, 255);
+        px_set(buf, size, size - 3, y, 130, 85, 35, 255);
+        px_set(buf, size, size - 4, y, 130, 85, 35, 255);
+    }
+    for (int x = 4; x < size - 4; x++) {
+        px_set(buf, size, x, 4, 140, 95, 40, 255);
+        px_set(buf, size, x, size / 2, 140, 95, 40, 255);
+    }
+    px_set(buf, size, size - 7, size / 2 - 2, 200, 180, 60, 255);
+    px_set(buf, size, size - 7, size / 2 - 1, 200, 180, 60, 255);
+    px_set(buf, size, size - 7, size / 2, 200, 180, 60, 255);
+    px_noise(buf, size, &p, 160, 110, 50, 10, 0.15f);
+}
+
+static void tex_sign(unsigned char *buf, int size)
+{
+    Prng p;
+    prng_seed(&p, 222);
+    px_fill(buf, size, 0, 0, 0, 0);
+    for (int y = size / 2; y < size; y++) {
+        px_set(buf, size, size / 2 - 1, y, 140, 95, 40, 255);
+        px_set(buf, size, size / 2, y, 140, 95, 40, 255);
+    }
+    for (int y = 2; y < size / 2 - 1; y++) {
+        for (int x = 4; x < size - 4; x++) {
+            px_set(buf, size, x, y, 220, 200, 160, 255);
+        }
+    }
+    for (int x = 3; x < size - 3; x++) {
+        px_set(buf, size, x, 2, 140, 95, 40, 255);
+        px_set(buf, size, x, size / 2 - 2, 140, 95, 40, 255);
+    }
+    for (int y = 2; y < size / 2 - 1; y++) {
+        px_set(buf, size, 4, y, 140, 95, 40, 255);
+        px_set(buf, size, size - 5, y, 140, 95, 40, 255);
+    }
+    px_noise(buf, size, &p, 220, 200, 160, 12, 0.2f);
+}
+
+static void tex_portal(unsigned char *buf, int size)
+{
+    Prng p;
+    prng_seed(&p, 6666);
+    px_fill(buf, size, 140, 50, 200, 255);
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            int dx = x - size / 2;
+            int dy = y - size / 2;
+            int dist = dx * dx + dy * dy;
+            if (dist < 64) {
+                px_set(buf, size, x, y, 180, 80, 255, 255);
+            } else if (dist < 144) {
+                px_set(buf, size, x, y, 160, 60, 230, 255);
+            }
+        }
+    }
+    for (int i = 0; i < 5; i++) {
+        int cx = prng_range(&p, 4, size - 4);
+        int cy = prng_range(&p, 4, size - 4);
+        for (int j = 0; j < 6; j++) {
+            px_set(buf, size, cx + j, cy, 200, 120, 255, 255);
+        }
+    }
+    px_noise(buf, size, &p, 140, 50, 200, 25, 0.3f);
+}
+
 static void tex_default(unsigned char *buf, int size)
 {
     px_fill(buf, size, 255, 0, 255, 255);
@@ -397,7 +470,7 @@ static const struct {
     {5,   tex_wood},
     {6,   tex_wood_bg},
     {7,   tex_leaves},
-    {8,   tex_wood},
+    {8,   tex_door},
     {9,   tex_brick},
     {10,  tex_glass},
     {11,  tex_sand},
@@ -411,11 +484,11 @@ static const struct {
     {19,  tex_stone},
     {20,  tex_ice},
     {21,  tex_snow},
-    {22,  tex_wood},
+    {22,  tex_sign},
     {23,  tex_bedrock},
     {24,  tex_wood},
     {25,  tex_wood},
-    {26,  tex_stone},
+    {26,  tex_portal},
     {27,  tex_wood},
     {129, tex_dirt_bg},
     {130, tex_stone_bg},
