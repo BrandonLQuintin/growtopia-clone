@@ -140,7 +140,7 @@ int world_save(World *w, const char *path) {
     if (!f) return -1;
 
     const char magic[4] = {'G', 'R', 'O', 'W'};
-    uint32_t version = 1;
+    uint32_t version = 2;
 
     if (fwrite(magic, 1, 4, f) != 4) { fclose(f); return -1; }
     if (fwrite(&version, sizeof(uint32_t), 1, f) != 1) { fclose(f); return -1; }
@@ -149,6 +149,12 @@ int world_save(World *w, const char *path) {
 
     size_t tile_count = (size_t)w->width * w->height;
     if (fwrite(w->tiles, sizeof(Tile), tile_count, f) != tile_count) { fclose(f); return -1; }
+
+    uint32_t sc = (uint32_t)w->sign_count;
+    if (fwrite(&sc, sizeof(uint32_t), 1, f) != 1) { fclose(f); return -1; }
+    for (int i = 0; i < w->sign_count; i++) {
+        if (fwrite(w->sign_texts[i], 1, SIGN_TEXT_MAX_LEN + 1, f) != SIGN_TEXT_MAX_LEN + 1) { fclose(f); return -1; }
+    }
 
     fclose(f);
     return 0;
@@ -166,7 +172,7 @@ int world_load(World *w, const char *path) {
     if (memcmp(magic, "GROW", 4) != 0) { fclose(f); return -1; }
 
     if (fread(&version, sizeof(uint32_t), 1, f) != 1) { fclose(f); return -1; }
-    if (version != 1) { fclose(f); return -1; }
+    if (version < 1 || version > 2) { fclose(f); return -1; }
 
     if (fread(&width, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
     if (fread(&height, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
@@ -180,6 +186,21 @@ int world_load(World *w, const char *path) {
         return -1;
     }
 
+    memset(w->sign_texts, 0, sizeof(w->sign_texts));
+    w->sign_count = 0;
+
+    if (version >= 2) {
+        uint32_t sc;
+        if (fread(&sc, sizeof(uint32_t), 1, f) == 1 && sc <= SIGN_TABLE_SIZE) {
+            w->sign_count = (int)sc;
+            for (int i = 0; i < w->sign_count; i++) {
+                if (fread(w->sign_texts[i], 1, SIGN_TEXT_MAX_LEN + 1, f) != SIGN_TEXT_MAX_LEN + 1) {
+                    break;
+                }
+            }
+        }
+    }
+
     fclose(f);
     return 0;
 }
@@ -187,5 +208,5 @@ int world_load(World *w, const char *path) {
 int world_is_solid(World *w, int x, int y) {
     Tile *t = world_get_tile(w, x, y);
     if (!t) return 1;
-    return block_is_solid(t->fg);
+    return block_is_solid_with_data(t->fg, t->extra_data);
 }

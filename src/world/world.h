@@ -71,6 +71,10 @@
 #define GROWTH_STAGE_4 4
 #define GROWTH_COMPLETE 5
 
+#define SIGN_TABLE_SIZE 64
+#define SIGN_TEXT_MAX_LEN 32
+#define PORTAL_UNLINKED 0
+
 typedef struct {
     uint16_t fg;
     uint16_t bg;
@@ -84,6 +88,8 @@ typedef struct {
     int height;
     Tile *tiles;
     char name[64];
+    char sign_texts[SIGN_TABLE_SIZE][SIGN_TEXT_MAX_LEN + 1];
+    int sign_count;
 } World;
 
 int world_init(World *w, int width, int height);
