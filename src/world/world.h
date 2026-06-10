@@ -88,6 +88,8 @@ typedef struct {
     int height;
     Tile *tiles;
     char name[64];
+    float spawn_x;
+    float spawn_y;
     char sign_texts[SIGN_TABLE_SIZE][SIGN_TEXT_MAX_LEN + 1];
     int sign_count;
 } World;
@@ -101,5 +103,8 @@ int world_set_bg(World *w, int x, int y, uint16_t block_id);
 int world_save(World *w, const char *path);
 int world_load(World *w, const char *path);
 int world_is_solid(World *w, int x, int y);
+void world_set_name(World *w, const char *name);
+int world_exists(const char *name);
+void world_build_path(char *buf, int buf_size, const char *name, const char *ext);
 
 #endif

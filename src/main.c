@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #include <SDL2/SDL.h>
 
@@ -9,6 +10,7 @@
 #include "engine/camera.h"
 #include "engine/input.h"
 #include "engine/ui.h"
+#include "engine/world_select.h"
 #include "world/world.h"
 #include "world/block.h"
 #include "world/items.h"
@@ -23,13 +25,18 @@
 #define FPS_CAP 60
 #define FRAME_TIME (1000.0 / FPS_CAP)
 #define AUTOSAVE_INTERVAL 60.0f
-#define WORLD_PATH "res/worlds/main.wld"
-#define INVENTORY_PATH "res/worlds/main.inv"
-#define PLAYER_PATH "res/worlds/main.player"
 #define ITEM_WRENCH 9000
 #define ITEM_PICKAXE 9001
+#define PROFILE_PATH "res/worlds/player.dat"
+
+typedef enum {
+    GAME_STATE_MENU,
+    GAME_STATE_PLAYING
+} GameState;
 
 static int g_running = 1;
+static GameState g_game_state = GAME_STATE_MENU;
+static WorldSelect g_world_select;
 
 typedef struct {
     Renderer renderer;
@@ -48,60 +55,57 @@ typedef struct {
     int portal_link_pending;
     int portal_link_x, portal_link_y;
     uint64_t last_time;
+    char current_world_name[64];
+    int exit_confirm_active;
 } Game;
 
 static void game_save_all(Game *g) {
-    world_save(&g->world, WORLD_PATH);
-    inventory_save(&g->inventory, INVENTORY_PATH);
-    FILE *f = fopen(PLAYER_PATH, "wb");
-    if (f) {
-        fwrite(&g->player.x, sizeof(float), 1, f);
-        fwrite(&g->player.y, sizeof(float), 1, f);
-        fwrite(&g->player.gems, sizeof(int), 1, f);
-        fwrite(&g->player.health, sizeof(int), 1, f);
-        fclose(f);
-    }
+    g->world.spawn_x = g->player.x;
+    g->world.spawn_y = g->player.y;
+    char path[256];
+    world_build_path(path, sizeof(path), g->current_world_name, "wld");
+    world_save(&g->world, path);
+    inventory_save_profile(&g->inventory, g->player.gems, g->player.health, PROFILE_PATH);
     printf("Game saved.\n");
 }
 
-static int game_load_all(Game *g) {
-    if (world_load(&g->world, WORLD_PATH) != 0) {
-        return -1;
-    }
-    inventory_load(&g->inventory, INVENTORY_PATH);
-    FILE *f = fopen(PLAYER_PATH, "rb");
-    if (f) {
-        fread(&g->player.x, sizeof(float), 1, f);
-        fread(&g->player.y, sizeof(float), 1, f);
-        fread(&g->player.gems, sizeof(int), 1, f);
-        fread(&g->player.health, sizeof(int), 1, f);
-        fclose(f);
-    }
-    printf("Game loaded.\n");
-    return 0;
+
+static void ensure_worlds_dir(void) {
+    mkdir("res", 0755);
+    mkdir("res/worlds", 0755);
 }
 
-static void game_init(Game *g) {
-    memset(g, 0, sizeof(Game));
-    
-    if (renderer_init(&g->renderer) != 0) {
-        fprintf(stderr, "Failed to init renderer\n");
-        exit(1);
+static void game_enter_world(Game *g, const char *name) {
+    if (g->world.tiles) {
+        game_save_all(g);
+        world_free(&g->world);
     }
-    
-    SDL_StartTextInput();
-    
-    input_init(&g->input);
-    ui_init(&g->ui);
-    store_init(&g->store);
-    
-    g->autosave_timer = AUTOSAVE_INTERVAL;
-    g->last_time = SDL_GetPerformanceCounter();
-    
-    if (game_load_all(g) != 0) {
-        world_init(&g->world, WORLD_WIDTH, WORLD_HEIGHT);
+
+    strncpy(g->current_world_name, name, sizeof(g->current_world_name) - 1);
+    g->current_world_name[sizeof(g->current_world_name) - 1] = '\0';
+
+    char wld_path[256];
+    world_build_path(wld_path, sizeof(wld_path), name, "wld");
+
+    if (world_load(&g->world, wld_path) != 0) {
+        if (world_init(&g->world, WORLD_WIDTH, WORLD_HEIGHT) != 0) {
+            fprintf(stderr, "Failed to create world\n");
+            return;
+        }
         world_generate(&g->world);
-        player_init(&g->player, WORLD_WIDTH / 2 * TILE_SIZE, 10 * TILE_SIZE);
+        world_set_name(&g->world, name);
+        world_save(&g->world, wld_path);
+        printf("New world '%s' generated.\n", name);
+    }
+
+    player_init(&g->player, g->world.spawn_x, g->world.spawn_y);
+
+    int profile_loaded = 0;
+    if (inventory_load_profile(&g->inventory, &g->player.gems, &g->player.health, PROFILE_PATH) == 0) {
+        profile_loaded = 1;
+    }
+
+    if (!profile_loaded) {
         inventory_init(&g->inventory);
         inventory_add(&g->inventory, BLOCK_DIRT, 50);
         inventory_add(&g->inventory, BLOCK_STONE, 30);
@@ -109,15 +113,47 @@ static void game_init(Game *g) {
         inventory_add(&g->inventory, SEED_DIRT, 10);
         inventory_add(&g->inventory, SEED_GRASS, 5);
         inventory_add(&g->inventory, SEED_WOOD, 5);
-        g->player.gems = 100;
-        printf("New world generated.\n");
+        g->player.gems = 999999;
+        g->player.health = MAX_HEALTH;
     }
-    
+
     camera_init(&g->camera, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
     camera_set_target(&g->camera, g->player.x, g->player.y);
     g->camera.x = g->camera.target_x;
     g->camera.y = g->camera.target_y;
     renderer_generate_atlas(&g->renderer);
+
+    ui_close_all(&g->ui);
+    g->exit_confirm_active = 0;
+    g->sign_overlay_active = 0;
+    g->sign_overlay_timer = 0;
+    g->portal_link_pending = 0;
+    g->autosave_timer = AUTOSAVE_INTERVAL;
+
+    world_select_add_recent(&g_world_select, name);
+
+    g_game_state = GAME_STATE_PLAYING;
+}
+
+static void game_init(Game *g) {
+    memset(g, 0, sizeof(Game));
+
+    if (renderer_init(&g->renderer) != 0) {
+        fprintf(stderr, "Failed to init renderer\n");
+        exit(1);
+    }
+
+    SDL_StartTextInput();
+
+    input_init(&g->input);
+    ui_init(&g->ui);
+    store_init(&g->store);
+
+    g->autosave_timer = AUTOSAVE_INTERVAL;
+    g->last_time = SDL_GetPerformanceCounter();
+
+    ensure_worlds_dir();
+    world_select_init(&g_world_select);
 }
 
 static void game_handle_events(Game *g) {
@@ -125,48 +161,95 @@ static void game_handle_events(Game *g) {
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) {
             g_running = 0;
+            return;
         }
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
-            if (g->ui.state != UI_STATE_NONE) {
-                ui_close_all(&g->ui);
-            } else {
+
+        if (g_game_state == GAME_STATE_MENU) {
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                 g_running = 0;
+                return;
             }
+            world_select_handle_event(&g_world_select, &e);
+            continue;
         }
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_e) {
-            ui_toggle_inventory(&g->ui);
-        }
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_b) {
-            ui_toggle_store(&g->ui);
-        }
-        input_handle_event(&g->input, &e);
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
-            renderer_toggle_fullscreen(&g->renderer);
-        }
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
-            if (g->ui.state == UI_STATE_SIGN_EDIT) {
-                ui_finish_sign_edit(&g->ui, &g->world);
+
+        if (g_game_state == GAME_STATE_PLAYING) {
+            if (g->exit_confirm_active) {
+                if (e.type == SDL_KEYDOWN) {
+                    if (e.key.keysym.sym == SDLK_y) {
+                        g->exit_confirm_active = 0;
+                        game_save_all(g);
+                        g_game_state = GAME_STATE_MENU;
+                        world_select_init(&g_world_select);
+                        continue;
+                    }
+                    if (e.key.keysym.sym == SDLK_n || e.key.keysym.sym == SDLK_ESCAPE) {
+                        g->exit_confirm_active = 0;
+                    }
+                }
+                input_handle_event(&g->input, &e);
+                continue;
             }
-        }
-        if (e.type == SDL_TEXTINPUT && g->ui.state == UI_STATE_SIGN_EDIT) {
-            if (g->ui.sign_edit_cursor < SIGN_TEXT_MAX_LEN) {
-                int len = (int)strlen(e.text.text);
-                if (len > 0 && g->ui.sign_edit_cursor + len <= SIGN_TEXT_MAX_LEN) {
-                    g->ui.sign_edit_text[g->ui.sign_edit_cursor] = e.text.text[0];
-                    g->ui.sign_edit_cursor++;
+
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
+                if (g->ui.state != UI_STATE_NONE) {
+                    ui_close_all(&g->ui);
+                } else {
+                    g->exit_confirm_active = 1;
+                }
+                input_handle_event(&g->input, &e);
+                continue;
+            }
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_e) {
+                ui_toggle_inventory(&g->ui);
+            }
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_b) {
+                ui_toggle_store(&g->ui);
+            }
+            input_handle_event(&g->input, &e);
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
+                renderer_toggle_fullscreen(&g->renderer);
+            }
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
+                if (g->ui.state == UI_STATE_SIGN_EDIT) {
+                    ui_finish_sign_edit(&g->ui, &g->world);
                 }
             }
-        }
-        if (e.type == SDL_KEYDOWN && g->ui.state == UI_STATE_SIGN_EDIT) {
-            if (e.key.keysym.sym == SDLK_BACKSPACE && g->ui.sign_edit_cursor > 0) {
-                g->ui.sign_edit_cursor--;
-                g->ui.sign_edit_text[g->ui.sign_edit_cursor] = '\0';
+            if (e.type == SDL_TEXTINPUT && g->ui.state == UI_STATE_SIGN_EDIT) {
+                if (g->ui.sign_edit_cursor < SIGN_TEXT_MAX_LEN) {
+                    int len = (int)strlen(e.text.text);
+                    if (len > 0 && g->ui.sign_edit_cursor + len <= SIGN_TEXT_MAX_LEN) {
+                        g->ui.sign_edit_text[g->ui.sign_edit_cursor] = e.text.text[0];
+                        g->ui.sign_edit_cursor++;
+                    }
+                }
+            }
+            if (e.type == SDL_KEYDOWN && g->ui.state == UI_STATE_SIGN_EDIT) {
+                if (e.key.keysym.sym == SDLK_BACKSPACE && g->ui.sign_edit_cursor > 0) {
+                    g->ui.sign_edit_cursor--;
+                    g->ui.sign_edit_text[g->ui.sign_edit_cursor] = '\0';
+                }
             }
         }
     }
 }
 
 static void game_update(Game *g, float dt) {
+    if (g_game_state == GAME_STATE_MENU) {
+        world_select_update(&g_world_select, dt);
+        if (g_world_select.submitted) {
+            g_world_select.submitted = 0;
+            game_enter_world(g, g_world_select.input_text);
+        }
+        input_update(&g->input);
+        return;
+    }
+
+    if (g->exit_confirm_active) {
+        input_update(&g->input);
+        return;
+    }
+
     if (g->ui.state != UI_STATE_NONE) {
         ui_update(&g->ui, &g->input, &g->renderer);
         
@@ -498,6 +581,13 @@ static void game_update(Game *g, float dt) {
 }
 
 static void game_render(Game *g) {
+    if (g_game_state == GAME_STATE_MENU) {
+        renderer_clear(&g->renderer, 0.05f, 0.05f, 0.15f);
+        world_select_render(&g_world_select, &g->renderer);
+        renderer_present(&g->renderer);
+        return;
+    }
+
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
     float cam_left = g->camera.x - g_screen_w / 2.0f;
@@ -621,7 +711,23 @@ static void game_render(Game *g) {
         ui_render_sign_edit(&g->ui, &g->renderer);
     }
     
-    renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Quit", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
+    if (g->exit_confirm_active) {
+        int dw = 260;
+        int dh = 60;
+        int dx = (g_screen_w - dw) / 2;
+        int dy = (g_screen_h - dh) / 2;
+        renderer_draw_rect(&g->renderer, dx, dy, dw, dh, 0.0f, 0.0f, 0.0f, 0.9f);
+        renderer_draw_rect(&g->renderer, dx, dy, dw, 1, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(&g->renderer, dx, dy + dh - 1, dw, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+        renderer_draw_rect(&g->renderer, dx, dy, 1, dh, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(&g->renderer, dx + dw - 1, dy, 1, dh, 0.0f, 0.0f, 0.0f, 1.0f);
+        int qtw = renderer_text_width(&g->renderer, "EXIT WORLD?", 2.0f);
+        renderer_draw_text(&g->renderer, "EXIT WORLD?", dx + (dw - qtw) / 2, dy + 8, 2.0f, 1.0f, 1.0f, 1.0f);
+        int htw = renderer_text_width(&g->renderer, "Y/N", 1.5f);
+        renderer_draw_text(&g->renderer, "Y/N", dx + (dw - htw) / 2, dy + 34, 1.5f, 0.7f, 0.7f, 0.7f);
+    }
+
+    renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Menu", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
     
     renderer_end_ui(&g->renderer);
     
@@ -629,8 +735,10 @@ static void game_render(Game *g) {
 }
 
 static void game_shutdown(Game *g) {
-    game_save_all(g);
-    world_free(&g->world);
+    if (g_game_state == GAME_STATE_PLAYING) {
+        game_save_all(g);
+        world_free(&g->world);
+    }
     renderer_shutdown(&g->renderer);
 }
 

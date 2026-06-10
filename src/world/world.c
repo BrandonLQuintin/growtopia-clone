@@ -1,5 +1,6 @@
 #include "world.h"
 #include "block.h"
+#include "../engine/renderer.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -11,6 +12,8 @@ int world_init(World *w, int width, int height) {
     w->width = width;
     w->height = height;
     memset(w->name, 0, sizeof(w->name));
+    w->spawn_x = (float)(width / 2 * TILE_SIZE);
+    w->spawn_y = 10.0f * TILE_SIZE;
     memset(w->sign_texts, 0, sizeof(w->sign_texts));
     w->sign_count = 0;
     return 0;
@@ -144,12 +147,14 @@ int world_save(World *w, const char *path) {
     if (!f) return -1;
 
     const char magic[4] = {'G', 'R', 'O', 'W'};
-    uint32_t version = 2;
-
+    uint32_t version = 3;
     if (fwrite(magic, 1, 4, f) != 4) { fclose(f); return -1; }
     if (fwrite(&version, sizeof(uint32_t), 1, f) != 1) { fclose(f); return -1; }
     if (fwrite(&w->width, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
     if (fwrite(&w->height, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
+    if (fwrite(w->name, 1, 64, f) != 64) { fclose(f); return -1; }
+    if (fwrite(&w->spawn_x, sizeof(float), 1, f) != 1) { fclose(f); return -1; }
+    if (fwrite(&w->spawn_y, sizeof(float), 1, f) != 1) { fclose(f); return -1; }
 
     size_t tile_count = (size_t)w->width * w->height;
     if (fwrite(w->tiles, sizeof(Tile), tile_count, f) != tile_count) { fclose(f); return -1; }
@@ -176,12 +181,22 @@ int world_load(World *w, const char *path) {
     if (memcmp(magic, "GROW", 4) != 0) { fclose(f); return -1; }
 
     if (fread(&version, sizeof(uint32_t), 1, f) != 1) { fclose(f); return -1; }
-    if (version < 1 || version > 2) { fclose(f); return -1; }
+    if (version < 1 || version > 3) { fclose(f); return -1; }
 
     if (fread(&width, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
     if (fread(&height, sizeof(int), 1, f) != 1) { fclose(f); return -1; }
 
     if (world_init(w, width, height) != 0) { fclose(f); return -1; }
+
+    if (version >= 3) {
+        if (fread(w->name, 1, 64, f) != 64) { world_free(w); fclose(f); return -1; }
+        if (fread(&w->spawn_x, sizeof(float), 1, f) != 1) { world_free(w); fclose(f); return -1; }
+        if (fread(&w->spawn_y, sizeof(float), 1, f) != 1) { world_free(w); fclose(f); return -1; }
+    } else {
+        memset(w->name, 0, sizeof(w->name));
+        w->spawn_x = (float)(w->width / 2 * TILE_SIZE);
+        w->spawn_y = 10.0f * TILE_SIZE;
+    }
 
     size_t tile_count = (size_t)width * height;
     if (fread(w->tiles, sizeof(Tile), tile_count, f) != tile_count) {
@@ -213,4 +228,21 @@ int world_is_solid(World *w, int x, int y) {
     Tile *t = world_get_tile(w, x, y);
     if (!t) return 1;
     return block_is_solid_with_data(t->fg, t->extra_data);
+}
+
+void world_set_name(World *w, const char *name) {
+    memset(w->name, 0, sizeof(w->name));
+    snprintf(w->name, sizeof(w->name), "%s", name);
+}
+
+int world_exists(const char *name) {
+    char path[256];
+    snprintf(path, sizeof(path), "res/worlds/%s.wld", name);
+    FILE *f = fopen(path, "rb");
+    if (f) { fclose(f); return 1; }
+    return 0;
+}
+
+void world_build_path(char *buf, int buf_size, const char *name, const char *ext) {
+    snprintf(buf, buf_size, "res/worlds/%s.%s", name, ext);
 }
