@@ -11,6 +11,9 @@ An offline 2D sandbox game inspired by Growtopia, built in C with SDL2 and OpenG
 - **Seed splicing** - combine two seeds in inventory to create new seed types (17 recipes)
 - **Offline store** with 5 categories (Blocks, Seeds, Tools, Clothing, Special)
 - **Full inventory** (36 slots) with click-to-swap and hotbar
+- **World search screen** - search for a world by name, load existing or create new
+- **Multiple worlds** with shared player profile across all worlds
+- **Recent worlds** list on the search screen (up to 8)
 - **World/inventory/player save/load** to binary files with auto-save
 - **Resizable window** and fullscreen support
 - **Procedural pixel-art textures** - generated at startup, no external image files needed
@@ -28,7 +31,7 @@ An offline 2D sandbox game inspired by Growtopia, built in C with SDL2 and OpenG
 | B | Toggle store |
 | F5 | Manual save |
 | F11 | Toggle fullscreen |
-| ESC | Close menu / Quit |
+| ESC | Return to world search / Quit |
 
 ## Seed Splicing
 
@@ -90,14 +93,15 @@ src/
     input.h/c         Keyboard/mouse state tracking
     ui.h/c            HUD, inventory, and store screen rendering
     block_texture.h/c Procedural 32x32 pixel-art block textures
+    world_select.h/c  World search screen, text input, recent worlds
     prng.h/c          Seeded deterministic PRNG
   world/
-    world.h/c         World grid, save/load, procedural generation
+    world.h/c         World grid, save/load (v3 format), procedural generation
     block.h/c         Block type definitions and properties
     items.h/c         Item database with all items, seeds, tools
   game/
     player.h/c        Player physics and collision
-    inventory.h/c     Inventory slot management
+    inventory.h/c     Inventory slot management and shared profile save/load
     farming.h/c       Seed planting, growth, and harvesting
     store.h/c         Offline shop with categories and pricing
     crafting.h/c      Seed splice recipes
@@ -108,11 +112,11 @@ res/
 ## Save Data
 
 World data is stored in `res/worlds/`:
-- `main.wld` - World tile data (binary)
-- `main.inv` - Player inventory (binary)
-- `main.player` - Player position, gems, health (binary)
+- `<name>.wld` - World tile data, sign data, spawn position (binary, per-world)
+- `player.dat` - Shared inventory, gems, and health across all worlds (binary)
+- `recent.txt` - List of recently played worlds
 
-The game auto-saves every 60 seconds and on exit.
+The game auto-saves every 60 seconds and when exiting a world.
 
 ## License
 

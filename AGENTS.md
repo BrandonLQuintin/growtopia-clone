@@ -21,16 +21,17 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 
 ### Key Files
 
-- `src/main.c` - Game loop, all gameplay logic (movement, collision, breaking, placing, store buying)
+- `src/main.c` - Game loop with GameState machine (MENU/PLAYING), gameplay logic, world entry/exit
 - `src/engine/renderer.c` - OpenGL rendering, bitmap font, drawing primitives
 - `src/engine/camera.c` - 2D camera with smooth follow, world/screen coordinate transforms
 - `src/engine/ui.c` - HUD, hotbar, inventory screen, store screen rendering and interaction
 - `src/engine/input.c` - Keyboard/mouse state (pressed vs held distinction)
-- `src/world/world.c` - World grid, procedural generation, binary save/load
+- `src/engine/world_select.c` - World search screen, text input, recent worlds list
+- `src/world/world.c` - World grid, procedural generation, binary save/load (v3 format with name + spawn)
 - `src/world/block.c` - Block definitions array (30+ blocks with colors, properties)
 - `src/world/items.c` - Item definitions (blocks, seeds, tools, clothing, currency)
 - `src/game/player.c` - Player physics (gravity, velocity, animation)
-- `src/game/inventory.c` - 36-slot inventory with add/remove/swap/save/load
+- `src/game/inventory.c` - 36-slot inventory with add/remove/swap/save/load and shared player profile
 - `src/game/farming.c` - Seed planting, growth tick, harvesting
 - `src/game/store.c` - Offline shop with 5 categories
 - `src/game/crafting.c` - Seed splice recipe table (17 recipes, used by in-world splicing)
@@ -52,11 +53,20 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 ### World Format
 
 - 100x60 tile grid, each tile: foreground block, background block, growth stage, growth timer
-- Binary save format: "GROW" magic + version(1) + width + height + raw tile array
+- Binary save format: "GROW" magic + version(3) + width + height + name(64) + spawn_pos + raw tile array + sign data
+- Per-world saves: `res/worlds/<name>.wld`, shared player profile: `res/worlds/player.dat`
+- Recent worlds list: `res/worlds/recent.txt`
+- v1/v2 files still load (name derived from filename, spawn defaults to surface center)
+
+### Game State
+
+- `GAME_STATE_MENU` - World search screen (startup + ESC return)
+- `GAME_STATE_PLAYING` - Gameplay with existing UI state machine
+- `game_enter_world(name)` handles full teardown/setup: save old world, free, load/generate, reset player/camera/UI
 
 ### UI System
 
-- `UI_STATE_NONE` / `UI_STATE_INVENTORY` / `UI_STATE_STORE`
+- `UI_STATE_NONE` / `UI_STATE_INVENTORY` / `UI_STATE_STORE` / `UI_STATE_SIGN_EDIT`
 - Slots have both click detection (`ui_update`) and rendering (`ui_render_*`) - positions MUST match
 - Seed splicing: hold a seed, right-click a growing plant (growth_stage 1-4) to splice via `crafting_splice()`
 
@@ -69,6 +79,7 @@ This is a Growtopia-inspired 2D sandbox game in C using SDL2 + OpenGL.
 - Tool IDs: 9000+ (Wrench=9000, Pickaxe=9001)
 - Clothing IDs: 9100+ (Hat=9100, Shirt=9101, Pants=9102)
 - Gems ID: 9999
+- World name: alphanumeric lowercase, max 20 chars
 
 ## Code Review Workflow
 
