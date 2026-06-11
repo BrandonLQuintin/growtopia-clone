@@ -12,6 +12,7 @@ typedef struct {
     int mouse_clicked[5];
     int mouse_x, mouse_y;
     int mouse_rel_x, mouse_rel_y;
+    int mouse_scroll_y;
 } Input;
 
 void input_init(Input *input);

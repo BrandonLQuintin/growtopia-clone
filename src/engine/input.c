@@ -12,6 +12,7 @@ void input_update(Input *input)
     memset(input->mouse_clicked, 0, sizeof(input->mouse_clicked));
     input->mouse_rel_x = 0;
     input->mouse_rel_y = 0;
+    input->mouse_scroll_y = 0;
 }
 
 void input_handle_event(Input *input, SDL_Event *e)
@@ -45,6 +46,9 @@ void input_handle_event(Input *input, SDL_Event *e)
         input->mouse_y = e->motion.y;
         input->mouse_rel_x = e->motion.xrel;
         input->mouse_rel_y = e->motion.yrel;
+        break;
+    case SDL_MOUSEWHEEL:
+        input->mouse_scroll_y += e->wheel.y;
         break;
     }
 }
