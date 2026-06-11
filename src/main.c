@@ -557,6 +557,10 @@ static void game_update(Game *g, float dt) {
         }
     }
     
+    if (g->input.mouse_scroll_y != 0) {
+        camera_set_zoom(&g->camera, g->camera.zoom_target + g->input.mouse_scroll_y * 0.1f);
+    }
+    
     if (input_is_key_pressed(&g->input, SDL_SCANCODE_F5)) {
         game_save_all(g);
     }
@@ -590,19 +594,21 @@ static void game_render(Game *g) {
 
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
-    float cam_left = g->camera.x - g_screen_w / 2.0f;
-    float cam_top = g->camera.y - g_screen_h / 2.0f;
+    float visible_w = g_screen_w / g->camera.zoom;
+    float visible_h = g_screen_h / g->camera.zoom;
+    float cam_left = g->camera.x - visible_w / 2.0f;
+    float cam_top = g->camera.y - visible_h / 2.0f;
     int start_x = (int)(cam_left / TILE_SIZE) - 1;
     int start_y = (int)(cam_top / TILE_SIZE) - 1;
-    int end_x = start_x + (g_screen_w / TILE_SIZE) + 3;
-    int end_y = start_y + (g_screen_h / TILE_SIZE) + 3;
+    int end_x = start_x + (int)(visible_w / TILE_SIZE) + 3;
+    int end_y = start_y + (int)(visible_h / TILE_SIZE) + 3;
     
     if (start_x < 0) start_x = 0;
     if (start_y < 0) start_y = 0;
     if (end_x > g->world.width) end_x = g->world.width;
     if (end_y > g->world.height) end_y = g->world.height;
     
-    renderer_begin_tile_batch(&g->renderer);
+    renderer_begin_tile_batch(&g->renderer, g->camera.zoom);
     
     for (int y = start_y; y < end_y; y++) {
         for (int x = start_x; x < end_x; x++) {
@@ -695,10 +701,12 @@ static void game_render(Game *g) {
             if (txt) {
                 int sox, soy;
                 camera_world_to_screen(&g->camera, g->sign_overlay_x * TILE_SIZE, g->sign_overlay_y * TILE_SIZE, &sox, &soy);
+                int px = (int)(sox * g->camera.zoom);
+                int py = (int)(soy * g->camera.zoom);
                 int tw = renderer_text_width(&g->renderer, txt, 1.5f);
                 int th = 16;
-                int label_x = sox + TILE_SIZE / 2 - tw / 2;
-                int label_y = soy - th - 8;
+                int label_x = px + (int)(TILE_SIZE * g->camera.zoom) / 2 - tw / 2;
+                int label_y = py - th - 8;
                 renderer_draw_rect(&g->renderer, label_x - 4, label_y - 2, tw + 8, th + 6, 0.0f, 0.0f, 0.0f, 0.8f);
                 renderer_draw_text(&g->renderer, txt, label_x, label_y, 1.5f, 1.0f, 1.0f, 1.0f);
             }
@@ -727,7 +735,7 @@ static void game_render(Game *g) {
         renderer_draw_text(&g->renderer, "Y/N", dx + (dw - htw) / 2, dy + 34, 1.5f, 0.7f, 0.7f, 0.7f);
     }
 
-    renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  F5: Save  F11: Fullscreen  ESC: Menu", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
+    renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  Scroll: Zoom  F5: Save  F11: FS  ESC: Menu", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
     
     renderer_end_ui(&g->renderer);
     
