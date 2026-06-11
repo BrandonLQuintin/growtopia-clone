@@ -30,7 +30,7 @@ void renderer_draw_text(Renderer *r, const char *text, int x, int y, float scale
 void renderer_draw_number(Renderer *r, int num, int x, int y, float scale, float r_col, float g, float b_col);
 int renderer_text_width(Renderer *r, const char *text, float scale);
 
-void renderer_begin_tile_batch(Renderer *r);
+void renderer_begin_tile_batch(Renderer *r, float zoom);
 void renderer_end_tile_batch(Renderer *r);
 void renderer_begin_ui(Renderer *r);
 void renderer_end_ui(Renderer *r);

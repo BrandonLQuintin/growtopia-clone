@@ -919,11 +919,13 @@ void renderer_get_size(Renderer *r, int *w, int *h) {
     SDL_GetWindowSize(r->window, w, h);
 }
 
-void renderer_begin_tile_batch(Renderer *r) {
+void renderer_begin_tile_batch(Renderer *r, float zoom) {
     renderer_get_size(r, &g_screen_w, &g_screen_h);
+    float view_w = (float)g_screen_w / zoom;
+    float view_h = (float)g_screen_h / zoom;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, g_screen_w, g_screen_h, 0, -1, 1);
+    glOrtho(0, view_w, view_h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glViewport(0, 0, g_screen_w, g_screen_h);
