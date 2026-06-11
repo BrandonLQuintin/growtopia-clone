@@ -45,8 +45,8 @@ void camera_world_to_screen(Camera *cam, float wx, float wy, int *sx, int *sy) {
 }
 
 void camera_screen_to_world(Camera *cam, int sx, int sy, int *wx, int *wy) {
-    *wx = (int)((float)sx * cam->zoom + cam->x - g_screen_w / 2.0f);
-    *wy = (int)((float)sy * cam->zoom + cam->y - g_screen_h / 2.0f);
+    *wx = (int)((float)sx / cam->zoom + cam->x - g_screen_w / (2.0f * cam->zoom));
+    *wy = (int)((float)sy / cam->zoom + cam->y - g_screen_h / (2.0f * cam->zoom));
 }
 
 void camera_set_zoom(Camera *cam, float zoom) {
