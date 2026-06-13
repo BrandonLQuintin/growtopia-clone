@@ -51,5 +51,7 @@ extern const int ITEM_DEF_COUNT;
 
 #define ITEM_FIST 0
 #define ITEM_GEMS 9999
+#define ITEM_WRENCH  9000
+#define ITEM_PICKAXE 9001
 
 #endif

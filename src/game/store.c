@@ -3,8 +3,6 @@
 #include "../world/items.h"
 #include <string.h>
 
-#define ITEM_WRENCH 9000
-#define ITEM_PICKAXE 9001
 #define ITEM_HAT 9100
 #define ITEM_SHIRT 9101
 #define ITEM_PANTS 9102

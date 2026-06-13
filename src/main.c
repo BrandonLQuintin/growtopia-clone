@@ -25,8 +25,6 @@
 #define FPS_CAP 60
 #define FRAME_TIME (1000.0 / FPS_CAP)
 #define AUTOSAVE_INTERVAL 60.0f
-#define ITEM_WRENCH 9000
-#define ITEM_PICKAXE 9001
 #define PROFILE_PATH "res/worlds/player.dat"
 
 typedef enum {
