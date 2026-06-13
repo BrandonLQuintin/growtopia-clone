@@ -1,6 +1,22 @@
 #include "farming.h"
 #include "../world/items.h"
 
+void farming_tick_nearby(World *w, int px, int py, float dt)
+{
+    for (int dy = -1; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            int cx = px + dx;
+            int cy = py + dy;
+            if (cx >= 0 && cx < w->width && cy >= 0 && cy < w->height) {
+                Tile *t = world_get_tile(w, cx, cy);
+                if (t && t->growth_stage > 0 && t->growth_stage < GROWTH_COMPLETE) {
+                    t->growth_timer += (uint32_t)(dt * 1000);
+                }
+            }
+        }
+    }
+}
+
 void farming_update(World *w, float dt)
 {
     uint32_t dt_ms = (uint32_t)(dt * 1000);

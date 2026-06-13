@@ -332,24 +332,9 @@ static void game_update(Game *g, float dt) {
     
     int px = (int)(g->player.x / TILE_SIZE);
     int py = (int)(g->player.y / TILE_SIZE);
-    
-    for (int dy = -1; dy <= 2; dy++) {
-        for (int dx = -2; dx <= 2; dx++) {
-            int cx = px + dx;
-            int cy = py + dy;
-            if (cx >= 0 && cx < g->world.width && cy >= 0 && cy < g->world.height) {
-                Tile *t = world_get_tile(&g->world, cx, cy);
-                if (t && t->growth_stage > 0 && t->growth_stage < GROWTH_COMPLETE) {
-                    t->growth_timer += (uint32_t)(dt * 1000);
-                }
-            }
-        }
-    }
+    farming_tick_nearby(&g->world, px, py, dt);
     farming_update(&g->world, dt);
-    
-    int facing_x, facing_y;
-    player_get_facing_tile(&g->player, &facing_x, &facing_y);
-    
+
     if (input_is_mouse_clicked(&g->input, 1)) {
         int mouse_wx, mouse_wy;
         camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
