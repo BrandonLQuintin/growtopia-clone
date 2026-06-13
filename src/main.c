@@ -333,143 +333,26 @@ static void game_update(Game *g, float dt) {
     farming_tick_nearby(&g->world, px, py, dt);
     farming_update(&g->world, dt);
 
-    if (input_is_mouse_clicked(&g->input, 1)) {
-        int mouse_wx, mouse_wy;
-        camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
-        mouse_wx /= TILE_SIZE;
-        mouse_wy /= TILE_SIZE;
-        int dist_x = mouse_wx - px;
-        int dist_y = mouse_wy - py;
-        if (dist_x * dist_x + dist_y * dist_y <= 36) {
-            Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
-            if (t && block_is_interactive(t->fg)) {
-                int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
-                if (tool_id != ITEM_PICKAXE) {
-                    int result = interact_punch(&g->world, &g->player, mouse_wx, mouse_wy);
-                    if (result == 2) {
-                        const char *txt = interact_get_sign_text(&g->world, mouse_wx, mouse_wy);
-                        if (txt) {
-                            g->sign_overlay_active = 1;
-                            g->sign_overlay_timer = 3.0f;
-                            g->sign_overlay_x = mouse_wx;
-                            g->sign_overlay_y = mouse_wy;
-                        }
-                    }
-                    g->player.breaking = 0;
-                    g->player.break_timer = 0;
-                    goto skip_break;
-                }
-            }
+    {
+        int sign_x, sign_y;
+        int click_result = interact_handle_click(&g->world, &g->player,
+            &g->inventory, g->ui.hotbar_selection, &g->input, &g->camera,
+            &sign_x, &sign_y);
+        if (click_result == 2) {
+            g->sign_overlay_active = 1;
+            g->sign_overlay_timer = 3.0f;
+            g->sign_overlay_x = sign_x;
+            g->sign_overlay_y = sign_y;
+        }
+        if (!click_result) {
+            interact_handle_break(&g->world, &g->player, &g->inventory,
+                g->ui.hotbar_selection, &g->input, &g->camera, dt);
         }
     }
 
-    if (input_is_mouse_down(&g->input, 1)) {
-        int mouse_wx, mouse_wy;
-        camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
-        mouse_wx /= TILE_SIZE;
-        mouse_wy /= TILE_SIZE;
-        int dist_x = mouse_wx - px;
-        int dist_y = mouse_wy - py;
-        if (dist_x * dist_x + dist_y * dist_y <= 36) {
-            Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
-            if (t && t->fg != BLOCK_AIR && t->fg != BLOCK_BEDROCK) {
-                int tool_id = inventory_get_hotbar_item(&g->inventory, g->ui.hotbar_selection);
-                if (block_is_interactive(t->fg) && tool_id != ITEM_PICKAXE) {
-                } else if (g->player.breaking && g->player.break_x == mouse_wx && g->player.break_y == mouse_wy) {
-                    g->player.break_timer += (int)(dt * 1000);
-                    int break_time = block_get_break_time(t->fg);
-                    int power = item_get_tool_power(tool_id);
-                    if (power > 0) {
-                        g->player.break_timer += (int)(power * dt * 1000);
-                    }
-                    if (g->player.break_timer >= break_time) {
-                        uint16_t drop = block_get_drop(t->fg);
-                        int count = block_get_drop_count(t->fg);
-                        if (drop != 0 && count > 0) {
-                            inventory_add(&g->inventory, drop, count);
-                        }
-                        if (t->growth_stage >= GROWTH_COMPLETE) {
-                            uint16_t drops[8];
-                            int dcounts[8];
-                            int ndrops = 0;
-                            farming_harvest(&g->world, mouse_wx, mouse_wy, drops, dcounts, &ndrops);
-                            for (int i = 0; i < ndrops; i++) {
-                                inventory_add(&g->inventory, drops[i], dcounts[i]);
-                            }
-                            int gem_drop = 1 + (rand() % 3);
-                            g->player.gems += gem_drop;
-                        }
-                        interact_cleanup_break(&g->world, mouse_wx, mouse_wy);
-                        t->fg = BLOCK_AIR;
-                        t->growth_stage = 0;
-                        t->growth_timer = 0;
-                        t->extra_data = 0;
-                        g->player.breaking = 0;
-                        g->player.break_timer = 0;
-                    }
-                } else {
-                    g->player.breaking = 1;
-                    g->player.break_x = mouse_wx;
-                    g->player.break_y = mouse_wy;
-                    g->player.break_timer = 0;
-                }
-            }
-        }
-    } else {
-        g->player.breaking = 0;
-        g->player.break_timer = 0;
-    }
-    skip_break:
-    
-    if (input_is_mouse_clicked(&g->input, 3)) {
-        int mouse_wx, mouse_wy;
-        camera_screen_to_world(&g->camera, g->input.mouse_x, g->input.mouse_y, &mouse_wx, &mouse_wy);
-        mouse_wx /= TILE_SIZE;
-        mouse_wy /= TILE_SIZE;
-        int dist_x = mouse_wx - px;
-        int dist_y = mouse_wy - py;
-        if (dist_x * dist_x + dist_y * dist_y <= 36) {
-            Tile *t = world_get_tile(&g->world, mouse_wx, mouse_wy);
-            if (t) {
-                int hotbar_slot = g->ui.hotbar_selection;
-                uint16_t held = inventory_get_hotbar_item(&g->inventory, hotbar_slot);
-                int held_count = inventory_get_hotbar_count(&g->inventory, hotbar_slot);
-
-                if (held == ITEM_WRENCH && t->fg != BLOCK_AIR) {
-                    int result = interact_wrench(&g->world, mouse_wx, mouse_wy,
-                        &g->portal_link_x, &g->portal_link_y, &g->portal_link_pending);
-                    if (result == 1) {
-                        ui_init_sign_edit(&g->ui, &g->world, mouse_wx, mouse_wy);
-                    }
-                    input_update(&g->input);
-                    return;
-                }
-
-                if (held != 0 && held_count > 0) {
-                    const ItemDef *def = item_get_def(held);
-                    if (def && def->is_seed && t->growth_stage >= GROWTH_STAGE_1 && t->growth_stage < GROWTH_COMPLETE) {
-                        uint16_t tile_seed = (uint16_t)t->extra_data;
-                        uint16_t result;
-                        if (crafting_splice(held, tile_seed, &result) == 0) {
-                            farming_plant_seed(&g->world, mouse_wx, mouse_wy, result);
-                            inventory_remove(&g->inventory, held, 1);
-                        }
-                    } else if (def && t->fg == BLOCK_AIR) {
-                        if (def->is_seed) {
-                            if (farming_can_plant(&g->world, mouse_wx, mouse_wy)) {
-                                farming_plant_seed(&g->world, mouse_wx, mouse_wy, held);
-                                inventory_remove(&g->inventory, held, 1);
-                            }
-                        } else if (def->category == ITEM_CAT_BLOCK) {
-                            t->fg = held;
-                            t->extra_data = 0;
-                            inventory_remove(&g->inventory, held, 1);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    interact_handle_place(&g->world, &g->player, &g->inventory,
+        g->ui.hotbar_selection, &g->input, &g->camera, &g->ui,
+        &g->portal_link_pending, &g->portal_link_x, &g->portal_link_y);
     
     for (int i = SDL_SCANCODE_1; i <= SDL_SCANCODE_9; i++) {
         if (input_is_key_pressed(&g->input, i)) {
