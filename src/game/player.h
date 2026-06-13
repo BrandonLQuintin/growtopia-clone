@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <stdint.h>
+#include "../world/world.h"
 
 #define PLAYER_WIDTH 24
 #define PLAYER_HEIGHT 48
@@ -28,6 +29,7 @@ typedef struct {
 
 void player_init(Player *p, float x, float y);
 void player_update(Player *p, float dt, int world_w, int world_h);
+void player_collide(Player *p, World *w);
 void player_get_tile_pos(Player *p, int *tx, int *ty);
 void player_get_facing_tile(Player *p, int *tx, int *ty);
 

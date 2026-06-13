@@ -328,70 +328,7 @@ static void game_update(Game *g, float dt) {
     
     player_update(&g->player, dt, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
     
-    {
-        float hw = PLAYER_WIDTH / 2.0f;
-        float left = g->player.x - hw;
-        float right = g->player.x + hw;
-        float top = g->player.y - PLAYER_HEIGHT;
-        float bottom = g->player.y;
-        
-        int tile_left = (int)(left / TILE_SIZE);
-        int tile_right = (int)(right / TILE_SIZE);
-        int tile_top = (int)(top / TILE_SIZE);
-        int tile_bottom = (int)(bottom / TILE_SIZE);
-        
-        g->player.on_ground = 0;
-        
-        for (int ty = tile_top; ty <= tile_bottom; ty++) {
-            for (int tx = tile_left; tx <= tile_right; tx++) {
-                if (world_is_solid(&g->world, tx, ty)) {
-                    float block_left = tx * TILE_SIZE;
-                    float block_right = block_left + TILE_SIZE;
-                    float block_top = ty * TILE_SIZE;
-                    float block_bottom = block_top + TILE_SIZE;
-                    
-                    float overlap_left = right - block_left;
-                    float overlap_right = block_right - left;
-                    float overlap_top = bottom - block_top;
-                    float overlap_bottom = block_bottom - top;
-                    
-                    float min_overlap = overlap_left;
-                    int resolve_axis = 0;
-                    
-                    if (overlap_right < min_overlap) { min_overlap = overlap_right; resolve_axis = 1; }
-                    if (overlap_top < min_overlap) { min_overlap = overlap_top; resolve_axis = 2; }
-                    if (overlap_bottom < min_overlap) { min_overlap = overlap_bottom; resolve_axis = 3; }
-                    
-                    switch (resolve_axis) {
-                        case 0:
-                            g->player.x = block_left - hw;
-                            g->player.vx = 0;
-                            break;
-                        case 1:
-                            g->player.x = block_right + hw;
-                            g->player.vx = 0;
-                            break;
-                        case 2:
-                            g->player.y = block_top;
-                            g->player.vy = 0;
-                            g->player.on_ground = 1;
-                            break;
-                        case 3:
-                            g->player.y = block_bottom + PLAYER_HEIGHT;
-                            g->player.vy = 0;
-                            break;
-                    }
-                    
-                    left = g->player.x - hw;
-                    right = g->player.x + hw;
-                    top = g->player.y - PLAYER_HEIGHT;
-                    bottom = g->player.y;
-                }
-            }
-        }
-        
-
-    }
+    player_collide(&g->player, &g->world);
     
     int px = (int)(g->player.x / TILE_SIZE);
     int py = (int)(g->player.y / TILE_SIZE);
