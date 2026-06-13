@@ -90,35 +90,6 @@ void inventory_swap_slots(Inventory *inv, int a, int b)
     inv->counts[b] = tmp_count;
 }
 
-int inventory_save(Inventory *inv, const char *path)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f)
-        return -1;
-    for (int i = 0; i < INVENTORY_SIZE; i++) {
-        fwrite(&inv->items[i], sizeof(uint16_t), 1, f);
-        fwrite(&inv->counts[i], sizeof(int), 1, f);
-    }
-    fclose(f);
-    return 0;
-}
-
-int inventory_load(Inventory *inv, const char *path)
-{
-    FILE *f = fopen(path, "rb");
-    if (!f)
-        return -1;
-    for (int i = 0; i < INVENTORY_SIZE; i++) {
-        if (fread(&inv->items[i], sizeof(uint16_t), 1, f) != 1 ||
-            fread(&inv->counts[i], sizeof(int), 1, f) != 1) {
-            fclose(f);
-            return -1;
-        }
-    }
-    fclose(f);
-    return 0;
-}
-
 int inventory_save_profile(Inventory *inv, int gems, int health, const char *path)
 {
     FILE *f = fopen(path, "wb");
