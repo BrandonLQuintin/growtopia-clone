@@ -251,36 +251,8 @@ static void game_update(Game *g, float dt) {
     if (g->ui.state != UI_STATE_NONE) {
         ui_update(&g->ui, &g->input, &g->renderer);
         
-        if (g->ui.state == UI_STATE_STORE && input_is_mouse_clicked(&g->input, 1)) {
-            Store store;
-            store_init(&store);
-            StoreEntry *entries;
-            int entry_count;
-            store_get_items(&store, g->ui.store_category, &entries, &entry_count);
-            
-            int STORE_COLS_LOCAL = 5;
-            int cell_w = 100;
-            int cell_h = 80;
-            int panel_w = STORE_COLS_LOCAL * 100 + 40;
-            int items_x = (g_screen_w - panel_w) / 2 + 20;
-            int tabs_y = 60 + 36;
-            int items_y = tabs_y + 28 + 16;
-            
-            for (int i = 0; i < entry_count; i++) {
-                int col = i % STORE_COLS_LOCAL;
-                int row = i / STORE_COLS_LOCAL;
-                int cx = items_x + col * cell_w;
-                int cy = items_y + row * cell_h;
-                
-                if (g->input.mouse_x >= cx && g->input.mouse_x < cx + 48 &&
-                    g->input.mouse_y >= cy && g->input.mouse_y < cy + 48) {
-                    if (g->player.gems >= entries[i].price) {
-                        g->player.gems -= entries[i].price;
-                        inventory_add(&g->inventory, entries[i].item_id, 1);
-                    }
-                    break;
-                }
-            }
+        if (g->ui.state == UI_STATE_STORE) {
+            store_handle_click(&g->store, &g->inventory, &g->input, &g->player.gems, g->ui.store_category);
         }
         
         if (g->ui.state == UI_STATE_INVENTORY && g->ui.drag_from_slot >= 0 && g->ui.selected_slot >= 0 &&

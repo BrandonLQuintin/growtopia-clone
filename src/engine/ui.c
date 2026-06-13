@@ -11,10 +11,8 @@
 #define HOTBAR_SLOTS 9
 #define INV_COLS 9
 #define INV_ROWS 4
-#define STORE_COLS 5
-#define STORE_TAB_COUNT 5
 
-static const char *store_tab_names[STORE_TAB_COUNT] = {
+static const char *store_tab_names[STORE_CAT_COUNT] = {
     "BLOCKS", "SEEDS", "TOOLS", "CLOTHES", "SPECIAL"
 };
 
@@ -84,19 +82,19 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
     if (ui->state == UI_STATE_STORE) {
         ensure_store();
         int tab_w = 110;
-        int tab_h = 28;
-        int tabs_total = STORE_TAB_COUNT * tab_w;
+        int tab_h = STORE_TAB_H;
+        int tabs_total = STORE_CAT_COUNT * tab_w;
         int tabs_x = (g_screen_w - tabs_total) / 2;
-        int tabs_y = 60 + 36;
-        for (int i = 0; i < STORE_TAB_COUNT; i++) {
+        int tabs_y = STORE_PANEL_Y + STORE_TAB_Y_OFFSET;
+        for (int i = 0; i < STORE_CAT_COUNT; i++) {
             if (point_in_rect(mx, my, tabs_x + i * tab_w, tabs_y, tab_w, tab_h)) {
                 ui->store_category = i;
                 break;
             }
         }
-        int panel_w = STORE_COLS * 100 + 40;
+        int panel_w = STORE_COLS * STORE_CELL_W + STORE_PANEL_PAD * 2;
         int close_x = (g_screen_w + panel_w) / 2 - 28;
-        int close_y = 60 + 6;
+        int close_y = STORE_PANEL_Y + 6;
         if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
             ui_close_all(ui);
         }
@@ -311,10 +309,10 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
 
     renderer_draw_rect(renderer, 0, 0, g_screen_w, g_screen_h, 0.0f, 0.0f, 0.0f, 0.6f);
 
-    int panel_w = STORE_COLS * 100 + 40;
+    int panel_w = STORE_COLS * STORE_CELL_W + STORE_PANEL_PAD * 2;
     int panel_h = 480;
     int panel_x = (g_screen_w - panel_w) / 2;
-    int panel_y = 60;
+    int panel_y = STORE_PANEL_Y;
 
     renderer_draw_rect(renderer, panel_x, panel_y, panel_w, panel_h,
         0.1f, 0.1f, 0.1f, 0.95f);
@@ -339,12 +337,12 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
         1.0f, 0.9f, 0.0f);
 
     int tab_w = 110;
-    int tab_h = 28;
-    int tabs_total = STORE_TAB_COUNT * tab_w;
+    int tab_h = STORE_TAB_H;
+    int tabs_total = STORE_CAT_COUNT * tab_w;
     int tabs_x = (g_screen_w - tabs_total) / 2;
-    int tabs_y = panel_y + 36;
+    int tabs_y = panel_y + STORE_TAB_Y_OFFSET;
 
-    for (int i = 0; i < STORE_TAB_COUNT; i++) {
+    for (int i = 0; i < STORE_CAT_COUNT; i++) {
         int tx = tabs_x + i * tab_w;
         if (i == ui->store_category) {
             renderer_draw_rect(renderer, tx, tabs_y, tab_w, tab_h,
@@ -366,10 +364,10 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
     int entry_count;
     store_get_items(&s_store, ui->store_category, &entries, &entry_count);
 
-    int items_x = panel_x + 20;
-    int items_y = tabs_y + tab_h + 16;
-    int cell_w = 100;
-    int cell_h = 80;
+    int items_x = panel_x + STORE_PANEL_PAD;
+    int items_y = tabs_y + STORE_TAB_H + STORE_ITEM_Y_GAP;
+    int cell_w = STORE_CELL_W;
+    int cell_h = STORE_CELL_H;
 
     for (int i = 0; i < entry_count; i++) {
         int col = i % STORE_COLS;
@@ -377,20 +375,20 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
         int cx = items_x + col * cell_w;
         int cy = items_y + row * cell_h;
 
-        renderer_draw_rect(renderer, cx, cy, SLOT_SIZE, SLOT_SIZE,
+        renderer_draw_rect(renderer, cx, cy, STORE_SLOT_SIZE, STORE_SLOT_SIZE,
             0.15f, 0.15f, 0.15f, 0.9f);
-        renderer_draw_rect(renderer, cx, cy, SLOT_SIZE, 1, 0.4f, 0.4f, 0.4f, 1.0f);
-        renderer_draw_rect(renderer, cx, cy + SLOT_SIZE - 1, SLOT_SIZE, 1, 0.0f, 0.0f, 0.0f, 1.0f);
-        renderer_draw_rect(renderer, cx, cy, 1, SLOT_SIZE, 0.4f, 0.4f, 0.4f, 1.0f);
-        renderer_draw_rect(renderer, cx + SLOT_SIZE - 1, cy, 1, SLOT_SIZE, 0.0f, 0.0f, 0.0f, 1.0f);
+        renderer_draw_rect(renderer, cx, cy, STORE_SLOT_SIZE, 1, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(renderer, cx, cy + STORE_SLOT_SIZE - 1, STORE_SLOT_SIZE, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+        renderer_draw_rect(renderer, cx, cy, 1, STORE_SLOT_SIZE, 0.4f, 0.4f, 0.4f, 1.0f);
+        renderer_draw_rect(renderer, cx + STORE_SLOT_SIZE - 1, cy, 1, STORE_SLOT_SIZE, 0.0f, 0.0f, 0.0f, 1.0f);
 
         int sprite = block_get_sprite(entries[i].item_id);
         if (sprite > 0) {
-            renderer_draw_tile_scaled(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12, sprite, 0);
+            renderer_draw_tile_scaled(renderer, cx + 6, cy + 6, STORE_SLOT_SIZE - 12, STORE_SLOT_SIZE - 12, sprite, 0);
         } else {
             int cr, cg, cb;
             item_get_color(entries[i].item_id, &cr, &cg, &cb);
-            renderer_draw_rect(renderer, cx + 6, cy + 6, SLOT_SIZE - 12, SLOT_SIZE - 12,
+            renderer_draw_rect(renderer, cx + 6, cy + 6, STORE_SLOT_SIZE - 12, STORE_SLOT_SIZE - 12,
                 cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
         }
 
@@ -404,13 +402,13 @@ void ui_render_store_screen(UI *ui, Renderer *renderer, int gems)
                 len++;
             }
             truncated[len] = '\0';
-            renderer_draw_text(renderer, truncated, cx, cy + SLOT_SIZE + 2, 1.0f,
+            renderer_draw_text(renderer, truncated, cx, cy + STORE_SLOT_SIZE + 2, 1.0f,
                 0.8f, 0.8f, 0.8f);
         }
 
         char price_buf[16];
         snprintf(price_buf, sizeof(price_buf), "%dg", entries[i].price);
-        renderer_draw_text(renderer, price_buf, cx + SLOT_SIZE + 4, cy + SLOT_SIZE / 2 - 6,
+        renderer_draw_text(renderer, price_buf, cx + STORE_SLOT_SIZE + 4, cy + STORE_SLOT_SIZE / 2 - 6,
             1.0f, 1.0f, 0.9f, 0.0f);
     }
 }

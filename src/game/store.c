@@ -1,4 +1,5 @@
 #include "store.h"
+#include "../engine/renderer.h"
 #include "../world/world.h"
 #include "../world/items.h"
 #include <string.h>
@@ -91,4 +92,34 @@ int store_get_items(Store *s, int category, StoreEntry **out_entries, int *out_c
     *out_entries = s->categories[category].entries;
     *out_count = s->categories[category].count;
     return 0;
+}
+
+void store_handle_click(Store *s, Inventory *inv, Input *in, int *gems, int category)
+{
+    if (!input_is_mouse_clicked(in, 1)) return;
+
+    StoreEntry *entries = NULL;
+    int entry_count = 0;
+    store_get_items(s, category, &entries, &entry_count);
+
+    int panel_w = STORE_COLS * STORE_CELL_W + STORE_PANEL_PAD * 2;
+    int items_x = (g_screen_w - panel_w) / 2 + STORE_PANEL_PAD;
+    int tabs_y = STORE_PANEL_Y + STORE_TAB_Y_OFFSET;
+    int items_y = tabs_y + STORE_TAB_H + STORE_ITEM_Y_GAP;
+
+    for (int i = 0; i < entry_count; i++) {
+        int col = i % STORE_COLS;
+        int row = i / STORE_COLS;
+        int cx = items_x + col * STORE_CELL_W;
+        int cy = items_y + row * STORE_CELL_H;
+
+        if (in->mouse_x >= cx && in->mouse_x < cx + STORE_SLOT_SIZE &&
+            in->mouse_y >= cy && in->mouse_y < cy + STORE_SLOT_SIZE) {
+            if (*gems >= entries[i].price) {
+                *gems -= entries[i].price;
+                inventory_add(inv, entries[i].item_id, 1);
+            }
+            break;
+        }
+    }
 }
