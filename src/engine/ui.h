@@ -2,6 +2,7 @@
 #define UI_H
 
 #include <stdint.h>
+#include <SDL2/SDL.h>
 #include "renderer.h"
 #include "input.h"
 #include "../world/items.h"
@@ -71,6 +72,9 @@ void ui_init_sign_edit(UI *ui, World *w, int tx, int ty);
 void ui_finish_sign_edit(UI *ui, World *w);
 void ui_render_sign_edit(UI *ui, Renderer *renderer);
 void ui_update_sign_edit(UI *ui, Input *input);
+int ui_handle_sign_edit_event(UI *ui, World *w, SDL_Event *e);
+
+void ui_render_exit_confirm(Renderer *renderer);
 
 int ui_get_hotbar_selection(UI *ui);
 

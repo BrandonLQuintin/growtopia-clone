@@ -521,3 +521,48 @@ void ui_render_sign_edit(UI *ui, Renderer *renderer) {
 
     renderer_draw_text(renderer, "Enter: Save  Esc: Cancel", px + 20, py + 90, 1.0f, 0.7f, 0.7f, 0.7f);
 }
+
+int ui_handle_sign_edit_event(UI *ui, World *w, SDL_Event *e) {
+    if (ui->state != UI_STATE_SIGN_EDIT) return 0;
+
+    if (e->type == SDL_TEXTINPUT) {
+        if (ui->sign_edit_cursor < SIGN_TEXT_MAX_LEN) {
+            int len = (int)strlen(e->text.text);
+            if (len > 0 && ui->sign_edit_cursor + len <= SIGN_TEXT_MAX_LEN) {
+                ui->sign_edit_text[ui->sign_edit_cursor] = e->text.text[0];
+                ui->sign_edit_cursor++;
+            }
+        }
+        return 1;
+    }
+
+    if (e->type == SDL_KEYDOWN) {
+        if (e->key.keysym.sym == SDLK_RETURN) {
+            ui_finish_sign_edit(ui, w);
+            return 1;
+        }
+        if (e->key.keysym.sym == SDLK_BACKSPACE && ui->sign_edit_cursor > 0) {
+            ui->sign_edit_cursor--;
+            ui->sign_edit_text[ui->sign_edit_cursor] = '\0';
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void ui_render_exit_confirm(Renderer *renderer) {
+    int dw = 260;
+    int dh = 60;
+    int dx = (g_screen_w - dw) / 2;
+    int dy = (g_screen_h - dh) / 2;
+    renderer_draw_rect(renderer, dx, dy, dw, dh, 0.0f, 0.0f, 0.0f, 0.9f);
+    renderer_draw_rect(renderer, dx, dy, dw, 1, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, dx, dy + dh - 1, dw, 1, 0.0f, 0.0f, 0.0f, 1.0f);
+    renderer_draw_rect(renderer, dx, dy, 1, dh, 0.4f, 0.4f, 0.4f, 1.0f);
+    renderer_draw_rect(renderer, dx + dw - 1, dy, 1, dh, 0.0f, 0.0f, 0.0f, 1.0f);
+    int qtw = renderer_text_width(renderer, "EXIT WORLD?", 2.0f);
+    renderer_draw_text(renderer, "EXIT WORLD?", dx + (dw - qtw) / 2, dy + 8, 2.0f, 1.0f, 1.0f, 1.0f);
+    int htw = renderer_text_width(renderer, "Y/N", 1.5f);
+    renderer_draw_text(renderer, "Y/N", dx + (dw - htw) / 2, dy + 34, 1.5f, 0.7f, 0.7f, 0.7f);
+}

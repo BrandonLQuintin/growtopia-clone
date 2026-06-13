@@ -208,25 +208,8 @@ static void game_handle_events(Game *g) {
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
                 renderer_toggle_fullscreen(&g->renderer);
             }
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
-                if (g->ui.state == UI_STATE_SIGN_EDIT) {
-                    ui_finish_sign_edit(&g->ui, &g->world);
-                }
-            }
-            if (e.type == SDL_TEXTINPUT && g->ui.state == UI_STATE_SIGN_EDIT) {
-                if (g->ui.sign_edit_cursor < SIGN_TEXT_MAX_LEN) {
-                    int len = (int)strlen(e.text.text);
-                    if (len > 0 && g->ui.sign_edit_cursor + len <= SIGN_TEXT_MAX_LEN) {
-                        g->ui.sign_edit_text[g->ui.sign_edit_cursor] = e.text.text[0];
-                        g->ui.sign_edit_cursor++;
-                    }
-                }
-            }
-            if (e.type == SDL_KEYDOWN && g->ui.state == UI_STATE_SIGN_EDIT) {
-                if (e.key.keysym.sym == SDLK_BACKSPACE && g->ui.sign_edit_cursor > 0) {
-                    g->ui.sign_edit_cursor--;
-                    g->ui.sign_edit_text[g->ui.sign_edit_cursor] = '\0';
-                }
+            if (ui_handle_sign_edit_event(&g->ui, &g->world, &e)) {
+                continue;
             }
         }
     }
@@ -495,19 +478,7 @@ static void game_render(Game *g) {
     }
     
     if (g->exit_confirm_active) {
-        int dw = 260;
-        int dh = 60;
-        int dx = (g_screen_w - dw) / 2;
-        int dy = (g_screen_h - dh) / 2;
-        renderer_draw_rect(&g->renderer, dx, dy, dw, dh, 0.0f, 0.0f, 0.0f, 0.9f);
-        renderer_draw_rect(&g->renderer, dx, dy, dw, 1, 0.4f, 0.4f, 0.4f, 1.0f);
-        renderer_draw_rect(&g->renderer, dx, dy + dh - 1, dw, 1, 0.0f, 0.0f, 0.0f, 1.0f);
-        renderer_draw_rect(&g->renderer, dx, dy, 1, dh, 0.4f, 0.4f, 0.4f, 1.0f);
-        renderer_draw_rect(&g->renderer, dx + dw - 1, dy, 1, dh, 0.0f, 0.0f, 0.0f, 1.0f);
-        int qtw = renderer_text_width(&g->renderer, "EXIT WORLD?", 2.0f);
-        renderer_draw_text(&g->renderer, "EXIT WORLD?", dx + (dw - qtw) / 2, dy + 8, 2.0f, 1.0f, 1.0f, 1.0f);
-        int htw = renderer_text_width(&g->renderer, "Y/N", 1.5f);
-        renderer_draw_text(&g->renderer, "Y/N", dx + (dw - htw) / 2, dy + 34, 1.5f, 0.7f, 0.7f, 0.7f);
+        ui_render_exit_confirm(&g->renderer);
     }
 
     renderer_draw_text(&g->renderer, "E: Inv  B: Store  LMB: Break  RMB: Place  Scroll: Zoom  F5: Save  F11: FS  ESC: Menu", 8, g_screen_h - 16, 1.0f, 1.0f, 1.0f, 1.0f);
