@@ -352,83 +352,11 @@ static void game_render(Game *g) {
 
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
-    float visible_w = g_screen_w / g->camera.zoom;
-    float visible_h = g_screen_h / g->camera.zoom;
-    float cam_left = g->camera.x - visible_w / 2.0f;
-    float cam_top = g->camera.y - visible_h / 2.0f;
-    int start_x = (int)(cam_left / TILE_SIZE) - 1;
-    int start_y = (int)(cam_top / TILE_SIZE) - 1;
-    int end_x = start_x + (int)(visible_w / TILE_SIZE) + 3;
-    int end_y = start_y + (int)(visible_h / TILE_SIZE) + 3;
-    
-    if (start_x < 0) start_x = 0;
-    if (start_y < 0) start_y = 0;
-    if (end_x > g->world.width) end_x = g->world.width;
-    if (end_y > g->world.height) end_y = g->world.height;
-    
     renderer_begin_tile_batch(&g->renderer, g->camera.zoom);
     
-    for (int y = start_y; y < end_y; y++) {
-        for (int x = start_x; x < end_x; x++) {
-            Tile *t = world_get_tile(&g->world, x, y);
-            if (!t) continue;
-            
-            int sx, sy;
-            camera_world_to_screen(&g->camera, x * TILE_SIZE, y * TILE_SIZE, &sx, &sy);
-            
-            if (t->bg != BLOCK_AIR) {
-                int sprite = block_get_sprite(t->bg);
-                renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
-            }
-            
-            if (t->fg != BLOCK_AIR) {
-                int sprite = block_get_sprite(t->fg);
-                if (t->growth_stage > 0 && t->growth_stage < GROWTH_COMPLETE) {
-                    int dirt_sprite = block_get_sprite(BLOCK_DIRT);
-                    renderer_draw_tile(&g->renderer, sx, sy, dirt_sprite, 0);
-                    float height_factor = 0.3f + 0.7f * (t->growth_stage / (float)GROWTH_COMPLETE);
-                    int draw_h = (int)(TILE_SIZE * height_factor);
-                    renderer_draw_tile_scaled(&g->renderer, sx, sy + TILE_SIZE - draw_h,
-                        TILE_SIZE, draw_h, sprite, 0);
-                } else if (t->growth_stage >= GROWTH_COMPLETE) {
-                    renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
-                    int leaf_sprite = block_get_sprite(BLOCK_LEAVES);
-                    renderer_draw_tile_scaled(&g->renderer, sx - 4, sy - 12,
-                        TILE_SIZE + 8, TILE_SIZE / 2 + 12, leaf_sprite, 0);
-                    renderer_draw_tile_border(&g->renderer, sx, sy);
-                } else {
-                    renderer_draw_tile(&g->renderer, sx, sy, sprite, 0);
-                    renderer_draw_tile_border(&g->renderer, sx, sy);
-                    if (t->fg == BLOCK_PORTAL) {
-                        float pulse = 0.5f + 0.5f * sinf((float)SDL_GetTicks() / 300.0f);
-                        renderer_draw_rect(&g->renderer, sx, sy, TILE_SIZE, TILE_SIZE,
-                            0.6f * pulse, 0.2f * pulse, 0.9f * pulse, 0.3f);
-                    }
-                }
-            }
-        }
-    }
-    
-    {
-        int psx, psy;
-        camera_world_to_screen(&g->camera, g->player.x - PLAYER_WIDTH / 2, g->player.y - PLAYER_HEIGHT, &psx, &psy);
-        renderer_draw_rect(&g->renderer, psx, psy, PLAYER_WIDTH, PLAYER_HEIGHT,
-            1.0f, 0.8f, 0.6f, 1.0f);
-        renderer_draw_rect(&g->renderer, psx + 4, psy + 4, 6, 6, 0.0f, 0.0f, 0.0f, 1.0f);
-        renderer_draw_rect(&g->renderer, psx + 14, psy + 4, 6, 6, 0.0f, 0.0f, 0.0f, 1.0f);
-    }
-    
-    if (g->player.breaking) {
-        int bsx, bsy;
-        camera_world_to_screen(&g->camera, g->player.break_x * TILE_SIZE, g->player.break_y * TILE_SIZE, &bsx, &bsy);
-        Tile *bt = world_get_tile(&g->world, g->player.break_x, g->player.break_y);
-        if (bt) {
-            int break_time = block_get_break_time(bt->fg);
-            float progress = (break_time > 0) ? (float)g->player.break_timer / break_time : 0.0f;
-            renderer_draw_rect(&g->renderer, bsx, bsy, TILE_SIZE, TILE_SIZE,
-                1.0f, 1.0f, 1.0f, progress * 0.5f);
-        }
-    }
+    renderer_draw_world(&g->renderer, &g->world, &g->camera);
+    renderer_draw_player(&g->renderer, &g->player, &g->camera);
+    renderer_draw_break_progress(&g->renderer, &g->world, &g->player, &g->camera);
     
     renderer_end_tile_batch(&g->renderer);
     

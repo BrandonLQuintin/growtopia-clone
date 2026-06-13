@@ -2,6 +2,9 @@
 #define RENDERER_H
 
 #include <SDL2/SDL.h>
+#include "camera.h"
+#include "../world/world.h"
+#include "../game/player.h"
 
 #define TILE_SIZE 32
 
@@ -45,5 +48,9 @@ void renderer_get_size(Renderer *r, int *w, int *h);
 void renderer_atlas_uv(int sprite_id, float *u0, float *v0, float *u1, float *v1);
 
 void renderer_draw_tile_border(Renderer *r, int screen_x, int screen_y);
+
+void renderer_draw_world(Renderer *r, World *w, Camera *cam);
+void renderer_draw_player(Renderer *r, Player *p, Camera *cam);
+void renderer_draw_break_progress(Renderer *r, World *w, Player *p, Camera *cam);
 
 #endif
