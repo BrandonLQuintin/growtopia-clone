@@ -9,7 +9,6 @@
 #include "../world/items.h"
 #include "crafting.h"
 #include "farming.h"
-#include <stdlib.h>
 
 int interact_punch(World *w, Player *p, int tx, int ty) {
     Tile *t = world_get_tile(w, tx, ty);
@@ -243,7 +242,7 @@ void interact_handle_break(World *w, Player *p, Inventory *inv, int hotbar_sel,
                 for (int i = 0; i < ndrops; i++) {
                     inventory_add(inv, drops[i], dcounts[i]);
                 }
-                int gem_drop = 1 + (rand() % 3);
+                int gem_drop = prng_range(&w->rng, 1, 3);
                 p->gems += gem_drop;
             }
             interact_cleanup_break(w, mouse_wx, mouse_wy);

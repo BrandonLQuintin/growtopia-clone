@@ -2,6 +2,7 @@
 #define WORLD_H
 
 #include <stdint.h>
+#include "../engine/prng.h"
 
 #define WORLD_WIDTH 100
 #define WORLD_HEIGHT 60
@@ -92,6 +93,7 @@ typedef struct {
     float spawn_y;
     char sign_texts[SIGN_TABLE_SIZE][SIGN_TEXT_MAX_LEN + 1];
     int sign_count;
+    Prng rng;
 } World;
 
 int world_init(World *w, int width, int height);

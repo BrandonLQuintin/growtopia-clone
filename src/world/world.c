@@ -16,6 +16,7 @@ int world_init(World *w, int width, int height) {
     w->spawn_y = 10.0f * TILE_SIZE;
     memset(w->sign_texts, 0, sizeof(w->sign_texts));
     w->sign_count = 0;
+    prng_seed(&w->rng, (uint32_t)time(NULL));
     return 0;
 }
 
@@ -29,8 +30,6 @@ void world_free(World *w) {
 }
 
 void world_generate(World *w) {
-    srand((unsigned)time(NULL));
-
     for (int x = 0; x < w->width; x++) {
         for (int y = 0; y < w->height; y++) {
             Tile *t = &w->tiles[y * w->width + x];
@@ -51,12 +50,12 @@ void world_generate(World *w) {
                 t->bg = BG_DIRT;
             } else if (y >= 27 && y <= 45) {
                 t->fg = BLOCK_DIRT;
-                if (rand() % 100 < 15) {
+                if (prng_float(&w->rng) < 0.15f) {
                     t->fg = BLOCK_STONE;
                 }
             } else if (y >= 46 && y <= 57) {
                 t->fg = BLOCK_STONE;
-                if (rand() % 100 < 10) {
+                if (prng_float(&w->rng) < 0.10f) {
                     t->fg = BLOCK_DIRT;
                 }
             } else if (y >= 58) {
@@ -65,11 +64,11 @@ void world_generate(World *w) {
         }
     }
 
-    int num_caves = 30 + rand() % 25;
+    int num_caves = prng_range(&w->rng, 30, 54);
     for (int c = 0; c < num_caves; c++) {
-        int cx = rand() % w->width;
-        int cy = 28 + rand() % 29;
-        int radius = 2 + rand() % 4;
+        int cx = prng_range(&w->rng, 0, w->width - 1);
+        int cy = prng_range(&w->rng, 28, 56);
+        int radius = prng_range(&w->rng, 2, 5);
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 if (dx * dx + dy * dy <= radius * radius) {
@@ -87,10 +86,10 @@ void world_generate(World *w) {
     }
 
     for (int x = 2; x < w->width - 2;) {
-        if (rand() % 100 < 8) {
+        if (prng_float(&w->rng) < 0.08f) {
             Tile *surface = &w->tiles[26 * w->width + x];
             if (surface->fg == BLOCK_GRASS) {
-                int trunk_h = 4 + rand() % 3;
+                int trunk_h = prng_range(&w->rng, 4, 6);
                 for (int ty = 0; ty < trunk_h; ty++) {
                     int y = 25 - ty;
                     if (y >= 0) {
@@ -115,7 +114,7 @@ void world_generate(World *w) {
                         }
                     }
                 }
-                x += 5 + rand() % 4;
+                x += prng_range(&w->rng, 5, 8);
                 continue;
             }
         }
