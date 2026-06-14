@@ -4,10 +4,6 @@
 #include "../world/items.h"
 #include <string.h>
 
-#define ITEM_HAT 9100
-#define ITEM_SHIRT 9101
-#define ITEM_PANTS 9102
-
 static void cat_add(StoreCategory *cat, uint16_t id, int price)
 {
     cat->entries[cat->count].item_id = id;

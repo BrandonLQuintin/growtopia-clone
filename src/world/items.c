@@ -154,6 +154,18 @@ int item_is_clothing(uint16_t item_id) {
     return def ? def->category == ITEM_CAT_CLOTHING : 0;
 }
 
+int item_clothing_slot(uint16_t item_id) {
+    if (!item_is_clothing(item_id))
+        return -1;
+    if (item_id == ITEM_HAT)
+        return 0;
+    if (item_id == ITEM_SHIRT)
+        return 1;
+    if (item_id == ITEM_PANTS)
+        return 2;
+    return -1;
+}
+
 int item_is_tool(uint16_t item_id) {
     const ItemDef *def = item_get_def(item_id);
     return def ? def->category == ITEM_CAT_TOOL : 0;

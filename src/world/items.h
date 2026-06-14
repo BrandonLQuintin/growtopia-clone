@@ -43,6 +43,7 @@ int item_get_sell_cost(uint16_t item_id);
 void item_get_color(uint16_t item_id, int *r, int *g, int *b);
 int item_get_sprite(uint16_t item_id);
 int item_is_clothing(uint16_t item_id);
+int item_clothing_slot(uint16_t item_id);
 int item_is_tool(uint16_t item_id);
 int item_get_tool_power(uint16_t item_id);
 
@@ -53,5 +54,8 @@ extern const int ITEM_DEF_COUNT;
 #define ITEM_GEMS 9999
 #define ITEM_WRENCH  9000
 #define ITEM_PICKAXE 9001
+#define ITEM_HAT     9100
+#define ITEM_SHIRT   9101
+#define ITEM_PANTS   9102
 
 #endif

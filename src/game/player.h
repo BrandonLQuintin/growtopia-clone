@@ -25,6 +25,9 @@ typedef struct {
     int anim_frame;
     int anim_timer;
     int walking;
+    uint16_t equipped_hat;
+    uint16_t equipped_shirt;
+    uint16_t equipped_pants;
 } Player;
 
 void player_init(Player *p, float x, float y);
