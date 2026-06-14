@@ -63,7 +63,8 @@ static void game_save_all(Game *g) {
     char path[256];
     world_build_path(path, sizeof(path), g->current_world_name, "wld");
     world_save(&g->world, path);
-    inventory_save_profile(&g->inventory, g->player.gems, g->player.health, PROFILE_PATH);
+    uint16_t equipped[3] = {g->player.equipped_hat, g->player.equipped_shirt, g->player.equipped_pants};
+    inventory_save_profile(&g->inventory, g->player.gems, g->player.health, equipped, PROFILE_PATH);
     printf("Game saved.\n");
 }
 
@@ -99,7 +100,11 @@ static void game_enter_world(Game *g, const char *name) {
     player_init(&g->player, g->world.spawn_x, g->world.spawn_y);
 
     int profile_loaded = 0;
-    if (inventory_load_profile(&g->inventory, &g->player.gems, &g->player.health, PROFILE_PATH) == 0) {
+    uint16_t equipped[3] = {0, 0, 0};
+    if (inventory_load_profile(&g->inventory, &g->player.gems, &g->player.health, equipped, PROFILE_PATH) == 0) {
+        g->player.equipped_hat = equipped[0];
+        g->player.equipped_shirt = equipped[1];
+        g->player.equipped_pants = equipped[2];
         profile_loaded = 1;
     }
 

@@ -90,7 +90,7 @@ void inventory_swap_slots(Inventory *inv, int a, int b)
     inv->counts[b] = tmp_count;
 }
 
-int inventory_save_profile(Inventory *inv, int gems, int health, const char *path)
+int inventory_save_profile(Inventory *inv, int gems, int health, uint16_t equipped[3], const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f)
@@ -101,11 +101,12 @@ int inventory_save_profile(Inventory *inv, int gems, int health, const char *pat
     }
     fwrite(&gems, sizeof(int), 1, f);
     fwrite(&health, sizeof(int), 1, f);
+    fwrite(equipped, sizeof(uint16_t), 3, f);
     fclose(f);
     return 0;
 }
 
-int inventory_load_profile(Inventory *inv, int *gems, int *health, const char *path)
+int inventory_load_profile(Inventory *inv, int *gems, int *health, uint16_t equipped[3], const char *path)
 {
     FILE *f = fopen(path, "rb");
     if (!f)
@@ -121,6 +122,11 @@ int inventory_load_profile(Inventory *inv, int *gems, int *health, const char *p
         fread(health, sizeof(int), 1, f) != 1) {
         fclose(f);
         return -1;
+    }
+    if (fread(equipped, sizeof(uint16_t), 3, f) != 3) {
+        equipped[0] = 0;
+        equipped[1] = 0;
+        equipped[2] = 0;
     }
     fclose(f);
     return 0;
