@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "block_texture.h"
 #include "../world/block.h"
+#include "../world/items.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include <GL/gl.h>
@@ -1060,6 +1061,24 @@ void renderer_draw_player(Renderer *r, Player *p, Camera *cam) {
     camera_world_to_screen(cam, p->x - PLAYER_WIDTH / 2, p->y - PLAYER_HEIGHT, &psx, &psy);
     renderer_draw_rect(r, psx, psy, PLAYER_WIDTH, PLAYER_HEIGHT,
         1.0f, 0.8f, 0.6f, 1.0f);
+    if (p->equipped_pants) {
+        int cr, cg, cb;
+        item_get_color(p->equipped_pants, &cr, &cg, &cb);
+        renderer_draw_rect(r, psx, psy + 36, PLAYER_WIDTH, 12,
+            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    }
+    if (p->equipped_shirt) {
+        int cr, cg, cb;
+        item_get_color(p->equipped_shirt, &cr, &cg, &cb);
+        renderer_draw_rect(r, psx, psy + 20, PLAYER_WIDTH, 16,
+            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    }
+    if (p->equipped_hat) {
+        int cr, cg, cb;
+        item_get_color(p->equipped_hat, &cr, &cg, &cb);
+        renderer_draw_rect(r, psx, psy, PLAYER_WIDTH, 8,
+            cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+    }
     renderer_draw_rect(r, psx + 4, psy + 4, 6, 6, 0.0f, 0.0f, 0.0f, 1.0f);
     renderer_draw_rect(r, psx + 14, psy + 4, 6, 6, 0.0f, 0.0f, 0.0f, 1.0f);
 }
