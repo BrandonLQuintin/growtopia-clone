@@ -57,6 +57,45 @@ typedef struct {
     int exit_confirm_active;
 } Game;
 
+static int handle_equip_swap(Inventory *inv, Player *p, int a, int b)
+{
+    if (a >= 36 && b >= 36)
+        return 0;
+
+    int inv_idx, equip_idx;
+    if (a >= 36) {
+        equip_idx = a;
+        inv_idx = b;
+    } else {
+        equip_idx = b;
+        inv_idx = a;
+    }
+
+    uint16_t inv_item = inv->items[inv_idx];
+    uint16_t equip_item;
+    if (equip_idx == 36)
+        equip_item = p->equipped_hat;
+    else if (equip_idx == 37)
+        equip_item = p->equipped_shirt;
+    else
+        equip_item = p->equipped_pants;
+
+    if (inv_item != 0 && item_clothing_slot(inv_item) != (equip_idx - 36))
+        return -1;
+
+    if (equip_idx == 36)
+        p->equipped_hat = inv_item;
+    else if (equip_idx == 37)
+        p->equipped_shirt = inv_item;
+    else
+        p->equipped_pants = inv_item;
+
+    inv->items[inv_idx] = equip_item;
+    inv->counts[inv_idx] = equip_item ? 1 : 0;
+
+    return 0;
+}
+
 static void game_save_all(Game *g) {
     g->world.spawn_x = g->player.x;
     g->world.spawn_y = g->player.y;
@@ -245,7 +284,15 @@ static void game_update(Game *g, float dt) {
         
         if (g->ui.state == UI_STATE_INVENTORY && g->ui.drag_from_slot >= 0 && g->ui.selected_slot >= 0 &&
             g->ui.drag_from_slot != g->ui.selected_slot) {
-            inventory_swap_slots(&g->inventory, g->ui.drag_from_slot, g->ui.selected_slot);
+            int a = g->ui.drag_from_slot;
+            int b = g->ui.selected_slot;
+            if (a >= 36 || b >= 36) {
+                if (handle_equip_swap(&g->inventory, &g->player, a, b) < 0) {
+                    g->ui.selected_slot = -1;
+                }
+            } else {
+                inventory_swap_slots(&g->inventory, a, b);
+            }
             g->ui.drag_from_slot = -1;
         }
         
