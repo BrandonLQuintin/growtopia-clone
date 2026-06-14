@@ -403,7 +403,8 @@ static void game_render(Game *g) {
             }
         }
     } else if (g->ui.state == UI_STATE_INVENTORY) {
-        ui_render_inventory_screen(&g->ui, &g->renderer, g->inventory.items, g->inventory.counts, INVENTORY_SIZE);
+        uint16_t equipped[3] = {g->player.equipped_hat, g->player.equipped_shirt, g->player.equipped_pants};
+        ui_render_inventory_screen(&g->ui, &g->renderer, g->inventory.items, g->inventory.counts, INVENTORY_SIZE, equipped);
     } else if (g->ui.state == UI_STATE_STORE) {
         ui_render_store_screen(&g->ui, &g->renderer, g->player.gems);
     } else if (g->ui.state == UI_STATE_SIGN_EDIT) {

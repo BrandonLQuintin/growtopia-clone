@@ -64,7 +64,7 @@ void ui_toggle_store(UI *ui);
 void ui_close_all(UI *ui);
 
 void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *hotbar_counts, int selected);
-void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size);
+void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size, uint16_t equipped[3]);
 void ui_render_store_screen(UI *ui, Renderer *renderer, int gems);
 void ui_render_hud(UI *ui, Renderer *renderer, int gems, int health);
 

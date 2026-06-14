@@ -72,8 +72,10 @@ void ui_update(UI *ui, Input *input, Renderer *renderer)
                 break;
             }
         }
-        int close_x = (g_screen_w + INV_COLS * SLOT_SIZE) / 2 + 4;
-        int close_y = (g_screen_h - INV_ROWS * SLOT_SIZE) / 2 - 44;
+        int cp_w = INV_COLS * SLOT_SIZE + SLOT_SIZE + 30;
+        int cp_h = INV_ROWS * SLOT_SIZE + 56;
+        int close_x = (g_screen_w - cp_w) / 2 + cp_w - 28;
+        int close_y = (g_screen_h - cp_h) / 2 + 6;
         if (point_in_rect(mx, my, close_x, close_y, 24, 24)) {
             ui_close_all(ui);
         }
@@ -225,7 +227,7 @@ void ui_render_hotbar(UI *ui, Renderer *renderer, uint16_t *hotbar_items, int *h
     }
 }
 
-void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size)
+void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items, int *inv_counts, int inv_size, uint16_t equipped[3])
 {
     renderer_draw_rect(renderer, 0, 0, g_screen_w, g_screen_h, 0.0f, 0.0f, 0.0f, 0.6f);
 
@@ -233,7 +235,7 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
     int grid_h = INV_ROWS * SLOT_SIZE;
     int panel_pad = 10;
     int title_h = 36;
-    int panel_w = grid_w + panel_pad * 2;
+    int panel_w = grid_w + SLOT_SIZE + panel_pad * 3;
     int panel_h = grid_h + title_h + panel_pad * 2;
     int panel_x = (g_screen_w - panel_w) / 2;
     int panel_y = (g_screen_h - panel_h) / 2;
@@ -254,7 +256,8 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
     renderer_draw_rect(renderer, close_x, close_y, 20, 20, 0.6f, 0.15f, 0.15f, 1.0f);
     renderer_draw_text(renderer, "X", close_x + 6, close_y + 3, 1.5f, 1.0f, 1.0f, 1.0f);
 
-    int grid_x = panel_x + panel_pad;
+    int equip_x = panel_x + panel_pad;
+    int grid_x = panel_x + SLOT_SIZE + panel_pad * 2;
     int grid_y = panel_y + title_h + panel_pad;
 
     ui->slot_count = 0;
@@ -276,6 +279,32 @@ void ui_render_inventory_screen(UI *ui, Renderer *renderer, uint16_t *inv_items,
         int is_sel = (ui->drag_from_slot == i);
         render_slot_bg(renderer, sx, sy, SLOT_SIZE, is_sel, s->hovered);
         render_slot_item(renderer, sx, sy, SLOT_SIZE, inv_items[i], inv_counts[i]);
+    }
+
+    static const char *equip_labels[3] = {"H", "S", "P"};
+    for (int i = 0; i < 3 && ui->slot_count < UI_MAX_SLOTS; i++) {
+        int sx = equip_x;
+        int sy = grid_y + i * SLOT_SIZE;
+
+        UISlot *s = &ui->slots[ui->slot_count];
+        s->x = sx;
+        s->y = sy;
+        s->size = SLOT_SIZE;
+        s->item_id = equipped[i];
+        s->count = equipped[i] ? 1 : 0;
+        s->selected = (ui->drag_from_slot == 36 + i);
+        ui->slot_count++;
+
+        int is_sel = (ui->drag_from_slot == 36 + i);
+        render_slot_bg(renderer, sx, sy, SLOT_SIZE, is_sel, s->hovered);
+        if (equipped[i]) {
+            render_slot_item(renderer, sx, sy, SLOT_SIZE, equipped[i], 1);
+        } else {
+            int lw = renderer_text_width(renderer, equip_labels[i], 2.0f);
+            renderer_draw_text(renderer, equip_labels[i],
+                sx + (SLOT_SIZE - lw) / 2, sy + (SLOT_SIZE - 14) / 2,
+                2.0f, 0.5f, 0.5f, 0.5f);
+        }
     }
 
     for (int i = 0; i < ui->slot_count; i++) {
