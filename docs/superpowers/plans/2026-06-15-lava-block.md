@@ -604,6 +604,7 @@ Full file contents:
 #include "lava.h"
 #include "../engine/prng.h"
 #include "../engine/renderer.h"
+#include <stdio.h>
 
 void lava_generate_pools(World *w)
 {
@@ -642,17 +643,13 @@ void lava_generate_pools(World *w)
             const int dxs[3] = {0, -1, 1};
             for (int i = 0; i < 3 && placed < LAVA_POOL_MAX_TILES; i++) {
                 int nx = x + dxs[i];
-                int ny = y;
-                if (dxs[i] == 0) ny = y + 1;
+                int ny = (dxs[i] == 0) ? y + 1 : y;
                 if (nx < 0 || nx >= w->width) continue;
                 if (ny < 27 || ny >= w->height) continue;
                 Tile *t = world_get_tile(w, nx, ny);
                 if (!t || t->fg != BLOCK_AIR) continue;
-                if (t->fg == BLOCK_BEDROCK) continue;
-                Tile *below = world_get_tile(w, nx, ny + 1);
-                if (!below || !block_is_solid_with_data(below->fg, below->extra_data)) {
-                    if (!(dxs[i] == 0 && below)) continue;
-                }
+                Tile *below_target = world_get_tile(w, nx, ny + 1);
+                if (!below_target || !block_is_solid_with_data(below_target->fg, below_target->extra_data)) continue;
                 t->fg = BLOCK_LAVA;
                 stack_x[stack_n] = nx;
                 stack_y[stack_n] = ny;
@@ -673,18 +670,9 @@ void lava_update(World *w, Player *p, float dt)
 
 Notes:
 - The `lava_update` stub here is a placeholder so the file compiles standalone. Task 5 replaces it with the real implementation.
-- The cellular fill spreads **down first** (dx=0, ny=y+1) then **sideways** (dx=±1, ny=y) only when the side tile has a solid floor below it — so lava settles on cave floors and doesn't cascade forever.
+- `<stdio.h>` is included explicitly for the `printf` in Task 5's `lava_update` (rather than relying on a fragile transitive include chain through SDL headers).
+- The cellular fill spreads **down first** (dx=0, ny=y+1) then **sideways** (dx=±1, ny=y), using a single uniform rule for both: the target tile must be air AND the tile below the target must be solid. This naturally produces shallow settled puddles on cave floors — downward flow stops when it hits the cave bottom, sideways flow only fills along solid floors.
 - Cap is `LAVA_POOL_MAX_TILES` (24) per pool.
-- The condition `if (!(dxs[i] == 0 && below)) continue;` lets downward flow proceed even if the tile-below check would otherwise fail (it should fail because we just placed lava there) — actually this is subtle. Re-read and simplify: **downward flow should always proceed into air**; sideways flow requires solid-below. The cleaner form is below in the verification step — re-check after first build and simplify if the logic looks convoluted.
-
-If the sideways-below check is hard to reason about, simplify to: **only spread down and sideways where target tile is air AND the tile below the target is solid**. That naturally settles puddles. The condition becomes:
-
-```c
-Tile *below_target = world_get_tile(w, nx, ny + 1);
-if (!below_target || !block_is_solid_with_data(below_target->fg, below_target->extra_data)) continue;
-```
-
-applied uniformly for both down and sideways. Use this simpler form if the convoluted version causes weird pools during playtesting.
 
 - [ ] **Step 3: Wire `lava_generate_pools` into `world_generate` in `src/world/world.c`**
 
