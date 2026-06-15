@@ -44,8 +44,9 @@ static void px_noise(unsigned char *buf, int size, Prng *p,
     }
 }
 
-static void tex_dirt(unsigned char *buf, int size)
+static void tex_dirt(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 42);
     px_fill(buf, size, 139, 90, 43, 255);
@@ -63,8 +64,9 @@ static void tex_dirt(unsigned char *buf, int size)
     }
 }
 
-static void tex_stone(unsigned char *buf, int size)
+static void tex_stone(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 99);
     px_fill(buf, size, 128, 128, 128, 255);
@@ -85,8 +87,9 @@ static void tex_stone(unsigned char *buf, int size)
     }
 }
 
-static void tex_grass(unsigned char *buf, int size)
+static void tex_grass(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 7);
     for (int y = 0; y < size; y++) {
@@ -115,8 +118,9 @@ static void tex_grass(unsigned char *buf, int size)
     px_set(buf, size, 16, 0, 35, 150, 35, 255);
 }
 
-static void tex_brick(unsigned char *buf, int size)
+static void tex_brick(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     px_fill(buf, size, 180, 80, 50, 255);
     int bh = size / 4;
     for (int row = 0; row < 4; row++) {
@@ -148,8 +152,9 @@ static void tex_brick(unsigned char *buf, int size)
     }
 }
 
-static void tex_wood(unsigned char *buf, int size)
+static void tex_wood(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 55);
     for (int y = 0; y < size; y++) {
@@ -175,8 +180,9 @@ static void tex_wood(unsigned char *buf, int size)
     }
 }
 
-static void tex_sand(unsigned char *buf, int size)
+static void tex_sand(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 33);
     px_fill(buf, size, 210, 190, 130, 255);
@@ -192,8 +198,9 @@ static void tex_sand(unsigned char *buf, int size)
     }
 }
 
-static void tex_glass(unsigned char *buf, int size)
+static void tex_glass(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     px_fill(buf, size, 180, 220, 255, 255);
     for (int i = 0; i < size; i++) {
         px_set(buf, size, 0, i, 160, 200, 240, 255);
@@ -210,8 +217,9 @@ static void tex_glass(unsigned char *buf, int size)
     px_set(buf, size, 25, 7, 240, 250, 255, 255);
 }
 
-static void tex_bedrock(unsigned char *buf, int size)
+static void tex_bedrock(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 666);
     px_fill(buf, size, 40, 40, 42, 255);
@@ -224,8 +232,9 @@ static void tex_bedrock(unsigned char *buf, int size)
     }
 }
 
-static void tex_water(unsigned char *buf, int size)
+static void tex_water(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 700);
     px_fill(buf, size, 50, 100, 200, 255);
@@ -242,8 +251,9 @@ static void tex_water(unsigned char *buf, int size)
     px_noise(buf, size, &p, 50, 100, 200, 15, 0.2f);
 }
 
-static void tex_lava(unsigned char *buf, int size)
+static void tex_lava(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 800);
     px_fill(buf, size, 220, 80, 20, 255);
@@ -260,8 +270,9 @@ static void tex_lava(unsigned char *buf, int size)
     }
 }
 
-static void tex_ice(unsigned char *buf, int size)
+static void tex_ice(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     px_fill(buf, size, 180, 220, 250, 255);
     Prng p;
     prng_seed(&p, 900);
@@ -278,8 +289,9 @@ static void tex_ice(unsigned char *buf, int size)
     }
 }
 
-static void tex_snow(unsigned char *buf, int size)
+static void tex_snow(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1000);
     px_fill(buf, size, 240, 245, 255, 255);
@@ -291,8 +303,9 @@ static void tex_snow(unsigned char *buf, int size)
     }
 }
 
-static void tex_leaves(unsigned char *buf, int size)
+static void tex_leaves(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 444);
     px_fill(buf, size, 30, 130, 30, 255);
@@ -304,16 +317,18 @@ static void tex_leaves(unsigned char *buf, int size)
     }
 }
 
-static void tex_dirt_bg(unsigned char *buf, int size)
+static void tex_dirt_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1042);
     px_fill(buf, size, 160, 110, 65, 255);
     px_noise(buf, size, &p, 160, 110, 65, 15, 0.4f);
 }
 
-static void tex_stone_bg(unsigned char *buf, int size)
+static void tex_stone_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1099);
     px_fill(buf, size, 150, 150, 150, 255);
@@ -327,16 +342,18 @@ static void tex_stone_bg(unsigned char *buf, int size)
     }
 }
 
-static void tex_grass_bg(unsigned char *buf, int size)
+static void tex_grass_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1007);
     px_fill(buf, size, 70, 170, 70, 255);
     px_noise(buf, size, &p, 70, 170, 70, 18, 0.4f);
 }
 
-static void tex_wood_bg(unsigned char *buf, int size)
+static void tex_wood_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1055);
     px_fill(buf, size, 190, 150, 90, 255);
@@ -348,8 +365,9 @@ static void tex_wood_bg(unsigned char *buf, int size)
     px_noise(buf, size, &p, 190, 150, 90, 10, 0.2f);
 }
 
-static void tex_brick_bg(unsigned char *buf, int size)
+static void tex_brick_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     px_fill(buf, size, 200, 110, 80, 255);
     int bh = size / 4;
     for (int row = 0; row < 4; row++) {
@@ -366,8 +384,9 @@ static void tex_brick_bg(unsigned char *buf, int size)
     }
 }
 
-static void tex_cloth_bg(unsigned char *buf, int size)
+static void tex_cloth_bg(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 1100);
     px_fill(buf, size, 220, 200, 180, 255);
@@ -379,8 +398,9 @@ static void tex_cloth_bg(unsigned char *buf, int size)
     }
 }
 
-static void tex_door(unsigned char *buf, int size)
+static void tex_door(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 888);
     px_fill(buf, size, 160, 110, 50, 255);
@@ -400,8 +420,9 @@ static void tex_door(unsigned char *buf, int size)
     px_noise(buf, size, &p, 160, 110, 50, 10, 0.15f);
 }
 
-static void tex_sign(unsigned char *buf, int size)
+static void tex_sign(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 222);
     px_fill(buf, size, 0, 0, 0, 0);
@@ -425,8 +446,9 @@ static void tex_sign(unsigned char *buf, int size)
     px_noise(buf, size, &p, 220, 200, 160, 12, 0.2f);
 }
 
-static void tex_portal(unsigned char *buf, int size)
+static void tex_portal(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     Prng p;
     prng_seed(&p, 6666);
     px_fill(buf, size, 140, 50, 200, 255);
@@ -452,12 +474,13 @@ static void tex_portal(unsigned char *buf, int size)
     px_noise(buf, size, &p, 140, 50, 200, 25, 0.3f);
 }
 
-static void tex_default(unsigned char *buf, int size)
+static void tex_default(unsigned char *buf, int size, int frame)
 {
+    (void)frame;
     px_fill(buf, size, 255, 0, 255, 255);
 }
 
-typedef void (*tex_fn)(unsigned char *, int);
+typedef void (*tex_fn)(unsigned char *, int, int);
 
 static const struct {
     int sprite_id;
@@ -516,18 +539,18 @@ static const struct {
 };
 #define TEX_DISPATCH_COUNT (sizeof(tex_dispatch) / sizeof(tex_dispatch[0]))
 
-void block_texture_generate(int sprite_id, unsigned char *buffer)
+void block_texture_generate(int sprite_id, int frame, unsigned char *buffer)
 {
-    tex_default(buffer, TILE_TEX_SIZE);
+    tex_default(buffer, TILE_TEX_SIZE, frame);
     for (int i = 0; i < (int)TEX_DISPATCH_COUNT; i++) {
         if (tex_dispatch[i].sprite_id == sprite_id) {
-            tex_dispatch[i].fn(buffer, TILE_TEX_SIZE);
+            tex_dispatch[i].fn(buffer, TILE_TEX_SIZE, frame);
             return;
         }
     }
 }
 
-void block_texture_generate_atlas(unsigned char *atlas_buffer)
+void block_texture_generate_atlas_frame(unsigned char *atlas_buffer, int frame_index)
 {
     memset(atlas_buffer, 0, ATLAS_SIZE * ATLAS_SIZE * 4);
     for (int i = 0; i < BLOCK_DEF_COUNT; i++) {
@@ -537,7 +560,7 @@ void block_texture_generate_atlas(unsigned char *atlas_buffer)
         int ox = col * TILE_TEX_SIZE;
         int oy = row * TILE_TEX_SIZE;
         unsigned char tile_buf[TILE_TEX_SIZE * TILE_TEX_SIZE * 4];
-        block_texture_generate(sid, tile_buf);
+        block_texture_generate(sid, frame_index, tile_buf);
         for (int ty = 0; ty < TILE_TEX_SIZE; ty++) {
             for (int tx = 0; tx < TILE_TEX_SIZE; tx++) {
                 int si = (ty * TILE_TEX_SIZE + tx) * 4;

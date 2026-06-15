@@ -784,10 +784,13 @@ int renderer_init(Renderer *r) {
 }
 
 void renderer_shutdown(Renderer *r) {
-    if (r->atlas_texture) {
-        glDeleteTextures(1, &r->atlas_texture);
-        r->atlas_texture = 0;
+    for (int i = 0; i < r->atlas_frame_count; i++) {
+        if (r->atlas_textures[i]) {
+            glDeleteTextures(1, &r->atlas_textures[i]);
+            r->atlas_textures[i] = 0;
+        }
     }
+    r->atlas_frame_count = 0;
     if (r->gl_context) {
         SDL_GL_DeleteContext(r->gl_context);
         r->gl_context = NULL;
@@ -821,9 +824,16 @@ void renderer_draw_rect(Renderer *r, int x, int y, int w, int h,
     glEnd();
 }
 
+static unsigned int renderer_current_atlas(Renderer *r) {
+    if (r->atlas_frame_count <= 1) return r->atlas_textures[0];
+    Uint32 t = SDL_GetTicks();
+    int frame = (t / ATLAS_FRAME_MS) % r->atlas_frame_count;
+    return r->atlas_textures[frame];
+}
+
 void renderer_draw_tile(Renderer *r, int screen_x, int screen_y, int tile_id, int frame) {
     (void)frame;
-    if (r->atlas_texture == 0) {
+    if (r->atlas_frame_count == 0) {
         float cr, cg, cb;
         get_tile_color(tile_id, &cr, &cg, &cb);
         renderer_draw_rect(r, screen_x, screen_y, TILE_SIZE, TILE_SIZE, cr, cg, cb, 1.0f);
@@ -832,7 +842,6 @@ void renderer_draw_tile(Renderer *r, int screen_x, int screen_y, int tile_id, in
     float u0, v0, u1, v1;
     renderer_atlas_uv(tile_id, &u0, &v0, &u1, &v1);
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, r->atlas_texture);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
     glTexCoord2f(u0, v0); glVertex2f((float)screen_x, (float)screen_y);
@@ -846,7 +855,7 @@ void renderer_draw_tile(Renderer *r, int screen_x, int screen_y, int tile_id, in
 void renderer_draw_tile_scaled(Renderer *r, int screen_x, int screen_y, int w, int h,
                                 int tile_id, int frame) {
     (void)frame;
-    if (r->atlas_texture == 0) {
+    if (r->atlas_frame_count == 0) {
         float cr, cg, cb;
         get_tile_color(tile_id, &cr, &cg, &cb);
         renderer_draw_rect(r, screen_x, screen_y, w, h, cr, cg, cb, 1.0f);
@@ -855,7 +864,6 @@ void renderer_draw_tile_scaled(Renderer *r, int screen_x, int screen_y, int w, i
     float u0, v0, u1, v1;
     renderer_atlas_uv(tile_id, &u0, &v0, &u1, &v1);
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, r->atlas_texture);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
     glTexCoord2f(u0, v0); glVertex2f((float)screen_x, (float)screen_y);
@@ -932,6 +940,9 @@ void renderer_begin_tile_batch(Renderer *r, float zoom) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glViewport(0, 0, g_screen_w, g_screen_h);
+    if (r->atlas_frame_count > 0) {
+        glBindTexture(GL_TEXTURE_2D, renderer_current_atlas(r));
+    }
 }
 
 void renderer_end_tile_batch(Renderer *r) {
@@ -946,6 +957,9 @@ void renderer_begin_ui(Renderer *r) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glViewport(0, 0, g_screen_w, g_screen_h);
+    if (r->atlas_frame_count > 0) {
+        glBindTexture(GL_TEXTURE_2D, r->atlas_textures[0]);
+    }
 }
 
 void renderer_end_ui(Renderer *r) {
@@ -968,10 +982,14 @@ unsigned int renderer_load_texture(const unsigned char *data, int width, int hei
 
 void renderer_generate_atlas(Renderer *r) {
     r->atlas_cols = ATLAS_COLS;
+    r->atlas_rows = ATLAS_ROWS;
+    r->atlas_frame_count = MAX_ATLAS_FRAMES;
     unsigned char *atlas_buf = (unsigned char *)malloc(ATLAS_SIZE * ATLAS_SIZE * 4);
-    if (!atlas_buf) return;
-    block_texture_generate_atlas(atlas_buf);
-    r->atlas_texture = renderer_load_texture(atlas_buf, ATLAS_SIZE, ATLAS_SIZE, 4);
+    if (!atlas_buf) { r->atlas_frame_count = 0; return; }
+    for (int f = 0; f < MAX_ATLAS_FRAMES; f++) {
+        block_texture_generate_atlas_frame(atlas_buf, f);
+        r->atlas_textures[f] = renderer_load_texture(atlas_buf, ATLAS_SIZE, ATLAS_SIZE, 4);
+    }
     free(atlas_buf);
 }
 

@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include "camera.h"
+#include "block_texture.h"
 #include "../world/world.h"
 #include "../game/player.h"
 
@@ -14,7 +15,8 @@ extern int g_screen_h;
 typedef struct {
     SDL_Window *window;
     SDL_GLContext gl_context;
-    unsigned int atlas_texture;
+    unsigned int atlas_textures[MAX_ATLAS_FRAMES];
+    int atlas_frame_count;
     int atlas_cols;
     int atlas_rows;
     int fullscreen;
