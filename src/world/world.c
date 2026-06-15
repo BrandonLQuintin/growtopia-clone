@@ -1,6 +1,7 @@
 #include "world.h"
 #include "block.h"
 #include "../engine/renderer.h"
+#include "../game/lava.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -84,6 +85,8 @@ void world_generate(World *w) {
             }
         }
     }
+
+    lava_generate_pools(w);
 
     for (int x = 2; x < w->width - 2;) {
         if (prng_float(&w->rng) < 0.08f) {
