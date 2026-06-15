@@ -253,19 +253,39 @@ static void tex_water(unsigned char *buf, int size, int frame)
 
 static void tex_lava(unsigned char *buf, int size, int frame)
 {
-    (void)frame;
     Prng p;
-    prng_seed(&p, 800);
-    px_fill(buf, size, 220, 80, 20, 255);
-    px_noise(buf, size, &p, 220, 80, 20, 30, 0.4f);
-    for (int i = 0; i < 6; i++) {
-        int cx = prng_range(&p, 2, 20);
-        int cy = prng_range(&p, 2, 20);
-        int len = prng_range(&p, 4, 10);
-        for (int j = 0; j < len; j++) {
-            px_set(buf, size, cx + j, cy + (j % 3), 255, 200, 50, 255);
-            if (j + 1 < len)
-                px_set(buf, size, cx + j + 1, cy + (j % 3), 255, 160, 30, 255);
+    prng_seed(&p, 800u + (unsigned)frame * 7919u);
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            float t = (float)y / (float)(size - 1);
+            unsigned char r = (unsigned char)(255.0f * (1.0f - t * 0.35f));
+            unsigned char g = (unsigned char)(130.0f * (1.0f - t * 0.55f));
+            unsigned char b = (unsigned char)(30.0f  * (1.0f - t * 0.50f));
+            int idx = (y * size + x) * 4;
+            buf[idx + 0] = r;
+            buf[idx + 1] = g;
+            buf[idx + 2] = b;
+            buf[idx + 3] = 255;
+        }
+    }
+    for (int i = 0; i < 8; i++) {
+        int cx = prng_range(&p, 3, size - 4);
+        int cy = prng_range(&p, 3, size - 4);
+        int br = prng_range(&p, 2, 4);
+        for (int dy = -br; dy <= br; dy++) {
+            for (int dx = -br; dx <= br; dx++) {
+                if (dx * dx + dy * dy <= br * br) {
+                    int px_x = cx + dx;
+                    int px_y = cy + dy;
+                    if (px_x >= 0 && px_x < size && px_y >= 0 && px_y < size) {
+                        int idx = (px_y * size + px_x) * 4;
+                        buf[idx + 0] = 255;
+                        buf[idx + 1] = 220;
+                        buf[idx + 2] = 80;
+                        buf[idx + 3] = 255;
+                    }
+                }
+            }
         }
     }
 }
