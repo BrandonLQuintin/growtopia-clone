@@ -20,6 +20,7 @@
 #include "game/crafting.h"
 #include "game/store.h"
 #include "game/interact.h"
+#include "game/lava.h"
 
 
 #define FPS_CAP 60
@@ -334,6 +335,7 @@ static void game_update(Game *g, float dt) {
     player_update(&g->player, dt, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
     
     player_collide(&g->player, &g->world);
+    lava_update(&g->world, &g->player, dt);
     
     int px = (int)(g->player.x / TILE_SIZE);
     int py = (int)(g->player.y / TILE_SIZE);

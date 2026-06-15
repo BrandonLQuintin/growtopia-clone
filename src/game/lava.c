@@ -60,7 +60,48 @@ void lava_generate_pools(World *w)
 
 void lava_update(World *w, Player *p, float dt)
 {
-    (void)w;
-    (void)p;
-    (void)dt;
+    static float s_lava_damage_accum = 0.0f;
+
+    float hw = PLAYER_WIDTH / 2.0f;
+    int tile_left   = (int)((p->x - hw) / TILE_SIZE);
+    int tile_right  = (int)((p->x + hw) / TILE_SIZE);
+    int tile_top    = (int)((p->y - PLAYER_HEIGHT) / TILE_SIZE);
+    int tile_bottom = (int)(p->y / TILE_SIZE);
+
+    int in_lava = 0;
+    for (int ty = tile_top; ty <= tile_bottom; ty++) {
+        for (int tx = tile_left; tx <= tile_right; tx++) {
+            Tile *t = world_get_tile(w, tx, ty);
+            if (t && t->fg == BLOCK_LAVA) {
+                in_lava = 1;
+                break;
+            }
+        }
+        if (in_lava) break;
+    }
+
+    if (!in_lava) {
+        s_lava_damage_accum = 0.0f;
+        return;
+    }
+
+    s_lava_damage_accum += LAVA_DAMAGE_PER_SEC * dt;
+    int dmg = (int)s_lava_damage_accum;
+    if (dmg > 0) {
+        p->health -= dmg;
+        s_lava_damage_accum -= (float)dmg;
+    }
+
+    p->vy = LAVA_BOUNCE_VELOCITY;
+    p->on_ground = 0;
+
+    if (p->health <= 0) {
+        p->health = MAX_HEALTH;
+        p->x = w->spawn_x;
+        p->y = w->spawn_y;
+        p->vx = 0;
+        p->vy = 0;
+        s_lava_damage_accum = 0.0f;
+        printf("Player died in lava, respawning.\n");
+    }
 }
