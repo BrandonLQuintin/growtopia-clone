@@ -13,6 +13,7 @@ static const ItemDef block_defs[BLOCK_FOREGROUND_MAX] = {
     [BLOCK_BRICK]     = {BLOCK_BRICK,     "Brick",           ITEM_CAT_BLOCK, 200, 15,  7, BLOCK_BRICK,     178,  34,  34, 0, 0, 0, 0, 0, 0},
     [BLOCK_GLASS]     = {BLOCK_GLASS,     "Glass",           ITEM_CAT_BLOCK, 200, 20, 10, BLOCK_GLASS,     173, 216, 230, 0, 0, 0, 0, 0, 0},
     [BLOCK_SAND]      = {BLOCK_SAND,      "Sand",            ITEM_CAT_BLOCK, 200,  5,  2, BLOCK_SAND,      237, 201, 175, 0, 0, 0, 0, 0, 0},
+    [BLOCK_LAVA]      = {BLOCK_LAVA,      "Lava",            ITEM_CAT_BLOCK, 200, 25, 12, BLOCK_LAVA,      220,  80,  20, 0, 0, 0, 0, 0, 0},
     [BLOCK_ROCK]      = {BLOCK_ROCK,      "Rock",            ITEM_CAT_BLOCK, 200, 10,  5, BLOCK_ROCK,      105, 105, 105, 0, 0, 0, 0, 0, 0},
     [BLOCK_LIMESTONE] = {BLOCK_LIMESTONE, "Limestone",       ITEM_CAT_BLOCK, 200, 15,  7, BLOCK_LIMESTONE, 211, 211, 211, 0, 0, 0, 0, 0, 0},
     [BLOCK_MUD]       = {BLOCK_MUD,       "Mud",             ITEM_CAT_BLOCK, 200,  5,  2, BLOCK_MUD,       101,  67,  33, 0, 0, 0, 0, 0, 0},

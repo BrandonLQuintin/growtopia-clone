@@ -32,6 +32,7 @@ void store_init(Store *s)
     cat_add(cat, BLOCK_GRAVEL, 3);
     cat_add(cat, BLOCK_ICE, 12);
     cat_add(cat, BLOCK_SNOW, 10);
+    cat_add(cat, BLOCK_LAVA, 25);
 
     cat = &s->categories[STORE_CAT_SEEDS];
     cat_add(cat, SEED_DIRT, 10);

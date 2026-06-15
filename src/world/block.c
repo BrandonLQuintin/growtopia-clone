@@ -16,7 +16,7 @@ const BlockDef BLOCK_DEFS[] = {
     {BLOCK_GLASS, "Glass", 1, 0, 100, 2, 0, 0, 0, 10, 200, 220, 255},
     {BLOCK_SAND, "Sand", 1, 0, 400, 1, BLOCK_SAND, 1, SEED_SAND, 11, 210, 190, 130},
     {BLOCK_WATER, "Water", 0, 0, 0, 0, 0, 0, 0, 12, 50, 100, 200},
-    {BLOCK_LAVA, "Lava", 0, 0, 0, 0, 0, 0, 0, 13, 220, 80, 20},
+    {BLOCK_LAVA, "Lava", 0, 0, 1500, 0, BLOCK_LAVA, 1, 0, 13, 220, 80, 20},
     {BLOCK_CLOTH_BG, "Cloth Background", 0, 1, 200, 1, BLOCK_CLOTH_BG, 1, 0, 14, 200, 180, 160},
     {BLOCK_ROCK, "Rock", 1, 0, 900, 3, BLOCK_ROCK, 1, SEED_ROCK, 15, 100, 100, 110},
     {BLOCK_LIMESTONE, "Limestone", 1, 0, 700, 2, BLOCK_LIMESTONE, 1, SEED_LIMESTONE, 16, 210, 200, 180},
