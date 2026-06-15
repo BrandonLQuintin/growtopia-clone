@@ -136,7 +136,7 @@ Add to `block_defs[]` array (between existing entries, order does not matter for
 
 Once this entry exists, `interact_handle_break` and `interact_handle_place` work without changes:
 - `interact_handle_break` reads `block_get_break_time(BLOCK_LAVA)` (1500ms), and on completion calls `inventory_add(inv, BLOCK_LAVA, 1)` via `block_get_drop`/`block_get_drop_count`.
-- `interact_handle_place` checks `item_is_block(BLOCK_LAVA)` (true via `BLOCK_LAVA < BLOCK_FOREGROUND_MAX`) and calls `world_set_fg(x, y, BLOCK_LAVA)`. Placed lava behaves identically to world-gen lava (damage/bounce/animation) because all checks key off `t->fg == BLOCK_LAVA`.
+- `interact_handle_place` checks `item_is_block(BLOCK_LAVA)` (true because the def's `category == ITEM_CAT_BLOCK`), then sets the target tile's `fg = BLOCK_LAVA` directly via a fetched `Tile *`. Placed lava behaves identically to world-gen lava (damage/bounce/animation) because all checks key off `t->fg == BLOCK_LAVA`.
 
 ### Store (`src/game/store.c`)
 
@@ -201,7 +201,7 @@ int atlas_frame_count;
 int atlas_cols;
 int atlas_rows;
 ```
-(Audit confirms `atlas_texture` is only referenced by `renderer_draw_tile`/`renderer_draw_tile_scaled`/`renderer_shutdown`/`renderer_generate_atlas` - safe to replace.)
+(Audit confirms `atlas_texture` is only referenced by `renderer_draw_tile`/`renderer_draw_tile_scaled`/`renderer_shutdown`/`renderer_generate_atlas` - safe to replace. Note: `atlas_rows` exists in the struct today but is never assigned; `ATLAS_ROWS` is not currently defined in `block_texture.h`. Implementer should add `#define ATLAS_ROWS (ATLAS_SIZE / TILE_TEX_SIZE)` to `block_texture.h` and assign `r->atlas_rows = ATLAS_ROWS;` in `renderer_generate_atlas` - or drop the field entirely. Either is fine; just don't paste the spec snippet without resolving this or it will not compile.)
 
 **`renderer.c` changes:**
 
@@ -234,6 +234,7 @@ int atlas_rows;
 4. `renderer_draw_tile` / `renderer_draw_tile_scaled`:
    - Replace `if (r->atlas_texture == 0)` with `if (r->atlas_frame_count == 0)` (fallback color-rect path).
    - Remove the per-call `glBindTexture(GL_TEXTURE_2D, r->atlas_texture);` line - the batch owns the bind now.
+   - **Keep the per-call `glEnable(GL_TEXTURE_2D);` ... draw ... `glDisable(GL_TEXTURE_2D);` pair** as-is. These bracket each tile draw and are independent of which texture is bound. Moving them out to batch scope is risky (changes GL state across many call sites including UI inventory icons) and out of scope. The bind is the only thing moving to batch scope.
    - The existing `frame` parameter stays as `(void)frame;` to avoid churning all call sites.
 
 5. `renderer_shutdown`: loop and `glDeleteTextures(1, &r->atlas_textures[i])` for each i in `[0, atlas_frame_count)`.
