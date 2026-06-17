@@ -9,6 +9,7 @@
 #include "../world/items.h"
 #include "crafting.h"
 #include "farming.h"
+#include "explosive.h"
 
 int interact_punch(World *w, Player *p, int tx, int ty) {
     Tile *t = world_get_tile(w, tx, ty);
@@ -267,6 +268,15 @@ void interact_handle_place(World *w, Player *p, Inventory *inv, int hotbar_sel,
 {
     if (!input_is_mouse_clicked(in, 3))
         return;
+
+    {
+        uint16_t held_bomb = inventory_get_hotbar_item(inv, hotbar_sel);
+        if (held_bomb == ITEM_BOMB) {
+            if (explosive_throw(p, cam, in))
+                inventory_remove(inv, ITEM_BOMB, 1);
+            return;
+        }
+    }
 
     int mouse_wx, mouse_wy;
     camera_screen_to_world(cam, in->mouse_x, in->mouse_y, &mouse_wx, &mouse_wy);

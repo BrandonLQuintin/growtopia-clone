@@ -21,6 +21,7 @@
 #include "game/store.h"
 #include "game/interact.h"
 #include "game/lava.h"
+#include "game/explosive.h"
 
 
 #define FPS_CAP 60
@@ -336,6 +337,7 @@ static void game_update(Game *g, float dt) {
     
     player_collide(&g->player, &g->world);
     lava_update(&g->world, &g->player, dt);
+    explosive_update(&g->world, &g->player, dt);
     
     int px = (int)(g->player.x / TILE_SIZE);
     int py = (int)(g->player.y / TILE_SIZE);
@@ -411,6 +413,7 @@ static void game_render(Game *g) {
     renderer_draw_world(&g->renderer, &g->world, &g->camera);
     renderer_draw_player(&g->renderer, &g->player, &g->camera);
     renderer_draw_break_progress(&g->renderer, &g->world, &g->player, &g->camera);
+    explosive_render(&g->renderer, &g->camera);
     
     renderer_end_tile_batch(&g->renderer);
     
