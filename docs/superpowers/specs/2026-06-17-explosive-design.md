@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add a throwable consumable, the **Bomb**, to the game. The player buys it from the store, selects it on the hotbar, and right-clicks to lob it in a gravity arc toward the cursor. It detonates on impact with any solid block or world edge, destroying a circular area of foreground blocks (sparing Bedrock and interactive blocks) and damaging/knocking back the player if caught in the blast. This is the first throwable item in the game, so it introduces a small projectile system.
+Add a throwable consumable, the **Bomb**, to the game. The player buys it from the store, selects it on the hotbar, and right-clicks to lob it in a gravity arc toward the cursor. It detonates on impact with any solid block or world edge, destroying a circular area of foreground blocks (sparing Bedrock and special/interactive blocks) and damaging/knocking back the player if caught in the blast. This is the first throwable item in the game, so it introduces a small projectile system.
 
 ## Requirements
 
@@ -10,9 +10,9 @@ Add a throwable consumable, the **Bomb**, to the game. The player buys it from t
 - Bomb is stackable up to 50, bought from the store (SPECIAL category) for 50 gems, sells back for 25
 - Right-click while holding a Bomb lobs it from the player toward the cursor at `BOMB_THROW_SPEED` in an arc under gravity
 - Only one bomb may be in flight (or flashing) at a time; throwing while one is active is ignored
-- Flight uses simple Euler integration with `BOMB_GRAVITY` (matches `PLAYER_GRAVITY`); no tunneling (per-frame step ≪ tile size)
+- Flight uses simple Euler integration with `BOMB_GRAVITY` (matches `PLAYER_GRAVITY`); no tunneling at normal frame rates (per-frame step ~6px ≪ 32px tile). At the main-loop `dt` cap of 0.1s the step could exceed one tile, matching the existing player-physics limitation (no sub-stepping) — acceptable and consistent.
 - The bomb detonates on impact with a solid block, world edge, or after a `BOMB_MAX_FLIGHT_S` safety timeout (air-burst)
-- Detonation destroys all foreground blocks within a circular radius (`BOMB_RADIUS_TILES`), except `BLOCK_BEDROCK` and interactive blocks (Door, Sign, Portal, Store, Lock, Mailbox, Tree Carcass)
+- Detonation destroys all foreground blocks within a circular radius (`BOMB_RADIUS_TILES`), except `BLOCK_BEDROCK` and special/interactive blocks (Door, Sign, Portal, Store, Lock, Mailbox, Tree Carcass). These are spared explicitly — the existing `block_is_interactive()` only covers Door/Sign/Portal, so `explosive.c` adds its own spare-set check.
 - Detonation applies flat `BOMB_DAMAGE` (50 HP) to the player if they are within the blast radius, with proximity-scaled knockback away from the center; lethal damage respawns the player (same path as lava)
 - Destroyed blocks yield no item drops (purely destructive)
 - Background tiles are not affected (foreground only)
@@ -59,8 +59,10 @@ typedef struct {
 
 static Bomb  s_bomb  = {0};
 static Flash s_flash = {0};
+
+static int is_bomb_spare(uint16_t fg);   /* defined near detonate(); see below */
 ```
-A single bomb in flight and a single flash, both file-local. Using statics avoids extending the `Player` or `World` structs (which would break save/load compatibility). This explicitly encodes the single-player assumption already present in the codebase, matching `lava.c`'s `s_lava_damage_accum`.
+A single bomb in flight and a single flash, both file-local. Using statics avoids extending the `Player` or `World` structs (which would break save/load compatibility). This explicitly encodes the single-player assumption already present in the codebase, matching `lava.c`'s `s_lava_damage_accum`. `is_bomb_spare` is a file-local predicate used by the blast loop (defined in the detonate section).
 
 ### `explosive_throw` behavior
 
@@ -127,7 +129,7 @@ Runs each frame after `lava_update`:
        s_bomb.active = 0;
    }
    ```
-- **No tunneling:** at 350 px/s the per-frame displacement is ~6 px at 60 fps, far below the 32 px tile size.
+- **No tunneling at normal frame rates:** at 350 px/s the per-frame displacement is ~6 px at 60 fps, far below the 32 px tile size. (At the main-loop `dt` cap of 0.1s a fast-falling bomb could step >32px; this matches the existing player-physics limitation and is acceptable.)
 - Order: step physics, then test impact against the new position's tile.
 
 ### `detonate` (file-local) behavior
@@ -144,9 +146,8 @@ for (int ty = cy - R; ty <= cy + R; ty++) {
         Tile *t = world_get_tile(w, tx, ty);
         if (!t) continue;
         if (t->fg == BLOCK_AIR) continue;
-        if (t->fg == BLOCK_BEDROCK) continue;
-        if (block_is_interactive(t->fg)) continue;  /* spare Door/Sign/Portal/Store/Lock/Mailbox/Tree_Carcass */
-        interact_cleanup_break(w, tx, ty);          /* safe no-op on ordinary tiles */
+        if (is_bomb_spare(t->fg)) continue;          /* Bedrock + all special/interactive blocks */
+        interact_cleanup_break(w, tx, ty);           /* safe no-op on ordinary tiles */
         t->fg = BLOCK_AIR;
         t->growth_stage = 0;
         t->growth_timer = 0;
@@ -154,9 +155,21 @@ for (int ty = cy - R; ty <= cy + R; ty++) {
     }
 }
 ```
+- **Why an explicit check, not `block_is_interactive`:** the existing `block_is_interactive()` (`block.c`) returns true only for `BLOCK_DOOR`, `BLOCK_SIGN`, and `BLOCK_PORTAL`. The blast must also spare `BLOCK_STORE` (1000 gems!), `BLOCK_LOCK`, `BLOCK_MAILBOX`, and `BLOCK_TREE_CARCASS`. So `explosive.c` defines a file-local helper:
+  ```c
+  static int is_bomb_spare(uint16_t fg) {
+      return fg == BLOCK_BEDROCK
+          || fg == BLOCK_STORE
+          || fg == BLOCK_LOCK
+          || fg == BLOCK_MAILBOX
+          || fg == BLOCK_TREE_CARCASS
+          || block_is_interactive(fg);   /* Door, Sign, Portal */
+  }
+  ```
+  (Requires `#include "../world/block.h"` for `block_is_interactive` and the block id macros, which come transitively via `world.h`.)
 - No drops (purely destructive).
 - Foreground only; background tiles untouched.
-- `interact_cleanup_break` is a safe no-op on non-sign/non-portal tiles and correctly handles a partner portal if a portal were somehow hit; since interactive blocks are skipped, this is defensive.
+- `interact_cleanup_break` is a safe no-op on non-sign/non-portal tiles and correctly handles a partner portal if a portal were somehow hit; since all interactive blocks are spared, this is defensive.
 
 **2. Player damage + knockback:**
 ```
@@ -209,15 +222,24 @@ In `items.h`, add to the constants block near the tool/clothing IDs:
 ```
 The 9200 range sits clear of tools (9000s), clothing (9100s), and gems (9999), and reserves room for future consumables.
 
-In `items.c`, add to the `item_defs[]` / `block_defs[]` array (the existing designated-initializer table):
+In `items.c`, the bomb belongs in the **positional** `ITEM_DEFS[]` array (the one holding Fist/Wrench/Pickaxe/Hat/Shirt/Pants/Gems), NOT in `block_defs[]` or `seed_defs[]` (those use designated initializers keyed by block/seed id and cannot hold id 9200). `item_get_def()` finds misc items by looping `ITEM_DEFS` and matching `.id`, so a positional entry is how this array works.
+
+Bump the count and append the entry:
 ```c
-[ITEM_BOMB] = {ITEM_BOMB, "Bomb", ITEM_CAT_CONSUMABLE, 50, 50, 25,
-               0, 40, 40, 40,
-               0, 0, 0, 0, 0, 0},
+#define MISC_ITEM_COUNT 8              /* was 7 */
+
+const ItemDef ITEM_DEFS[MISC_ITEM_COUNT] = {
+    {0,    "Fist",    ...},             /* existing entries unchanged */
+    ...
+    {9999, "Gems",    ...},
+    {ITEM_BOMB, "Bomb", ITEM_CAT_CONSUMABLE, 50, 50, 25,
+     0, 40, 40, 40, 0, 0, 0, 0, 0, 0},
+};
 ```
 - `category = ITEM_CAT_CONSUMABLE` (first item to use it; the category enum already exists)
 - `max_stack = 50`, `gem_cost = 50`, `sell_cost = 25`
 - `sprite_id = 0` and `color_r/g/b = 40, 40, 40` (dark grey); the inventory/store icon renders via the existing non-block color-rect path used by tools and clothing (verify during implementation; no new icon code expected)
+- Field order matches the `ItemDef` struct in `items.h`: `id, name, category, max_stack, gem_cost, sell_cost, sprite_id, color_r/g/b, is_seed, seed_grows_into, grow_time_ms, harvest_count, harvest_seed_count, tool_power`. `ITEM_DEF_COUNT` is defined as `MISC_ITEM_COUNT`, so it stays in sync automatically.
 
 ### Store (`src/game/store.c`)
 
@@ -230,15 +252,27 @@ cat_add(cat, ITEM_BOMB, 50);
 
 ### Throw wiring (`src/game/interact.c`)
 
-In `interact_handle_place`, at the top of the existing `if (held != 0 && held_count > 0)` block (before the seed-splice and block-place `else if` chain), add:
+In `interact_handle_place`, add the bomb branch **immediately after the right-click gate** (`if (!input_is_mouse_clicked(in, 3)) return;`, current line ~269) — BEFORE the `REACH_RADIUS` computation and the null-tile check. This placement is required because the spec mandates that throws bypass `REACH_RADIUS` (the player can lob bombs farther than they can reach to place blocks), and the cursor may legitimately aim at the open sky (a tile above the world would yield a null tile and early-return later in the function). Placing the branch after the gate avoids both early-returns.
 ```c
+/* right-click gate already passed above */
+if (held == ITEM_BOMB) {            /* re-read held here, or reuse the value computed below */
+    if (explosive_throw(p, cam, in))
+        inventory_remove(inv, ITEM_BOMB, 1);
+    return;
+}
+```
+Because the bomb branch runs before the existing `held`/`held_count` locals are computed (those appear later, ~line 288), the branch should fetch the held item itself:
+```c
+uint16_t held = inventory_get_hotbar_item(inv, hotbar_sel);
 if (held == ITEM_BOMB) {
     if (explosive_throw(p, cam, in))
         inventory_remove(inv, ITEM_BOMB, 1);
     return;
 }
 ```
-- Uses the same right-click gate (`input_is_mouse_clicked(in, 3)`) already checked at the top of `interact_handle_place`, so no new input binding.
+(The later `held`/`held_count` declarations at ~line 288 are unaffected — shadowing within this early block is avoided by returning immediately. Alternatively hoist the existing `held` declaration above the bomb branch; either is fine. The implementer picks one and ensures `-Wall -Wextra` stays clean.)
+- `explosive_throw` re-derives the cursor world position with its own `camera_screen_to_world` call (it needs pixel world coords; the `mouse_wx/mouse_wy` computed later in the function are tile-divided, so it cannot reuse them). This is intentional.
+- Uses the same right-click gate already checked at the top of `interact_handle_place`, so no new input binding.
 - Returns early so the bomb never falls through to seed/block placement.
 - Add `#include "explosive.h"` to `interact.c` (`camera.h`, `input.h`, `inventory.h`, `items.h` are already included).
 
@@ -292,7 +326,7 @@ Add `src/game/explosive.o` to the object list.
 - **Bomb lands on a non-solid tile** — keeps falling under gravity until it hits a solid block, the world edge, or the 5 s safety timeout (air-burst at the current tile).
 - **Detonate on world edge** — impact tile is clamped to the nearest in-bounds coordinate before the blast loop, so the destruction circle never reads out of bounds.
 - **Player standing on the bomb at impact** — knockback goes straight up (the `dist < 0.001f` branch), guaranteeing escape from a self-stacked hit.
-- **Portal / Sign / Door / interactive blocks spared** — the blast loop skips `block_is_interactive(t->fg)`; no portal/sign cleanup is triggered, and `interact_cleanup_break` is still called defensively (a no-op on these skipped tiles because they are never reached).
+- **Portal / Sign / Door / Store / Lock / Mailbox / Tree Carcass spared** — the blast loop skips tiles via the file-local `is_bomb_spare(t->fg)` (which covers Bedrock, the four special blocks, and `block_is_interactive`'s Door/Sign/Portal). No portal/sign cleanup is triggered; `interact_cleanup_break` is still called defensively on non-spared tiles (a no-op on plain blocks).
 - **Collision jitter from knockback** — knockback is a one-shot velocity set identical in spirit to `lava_update`'s bounce, which is already proven safe against the collision resolver in this codebase.
 - **Existing saves (no bombs)** — load fine. The bomb is just an inventory item id; the world format (v3) is unchanged and the inventory profile save already stores arbitrary item ids. Existing players simply have no bombs until they buy them.
 - **Renderer no-atlas fallback path** — irrelevant: the bomb and flash use `renderer_draw_rect`, which is independent of the tile atlas.
