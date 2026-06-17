@@ -164,3 +164,9 @@ void explosive_render(Renderer *r, Camera *cam)
                            1.0f, 0.78f, 0.24f, a);
     }
 }
+
+void explosive_reset(void)
+{
+    s_bomb.active = 0;
+    s_flash.active = 0;
+}

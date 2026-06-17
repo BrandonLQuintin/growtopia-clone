@@ -139,6 +139,7 @@ static void game_enter_world(Game *g, const char *name) {
     }
 
     player_init(&g->player, g->world.spawn_x, g->world.spawn_y);
+    explosive_reset();
 
     int profile_loaded = 0;
     uint16_t equipped[3] = {0, 0, 0};

@@ -18,5 +18,6 @@
 int  explosive_throw(Player *p, Camera *cam, Input *in);
 void explosive_update(World *w, Player *p, float dt);
 void explosive_render(Renderer *r, Camera *cam);
+void explosive_reset(void);
 
 #endif
