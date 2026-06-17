@@ -339,11 +339,11 @@ Add `src/game/explosive.o` to the object list.
 | `src/game/explosive.h` | NEW - constants + public API |
 | `src/game/explosive.c` | NEW - throw, physics, impact, blast, flash, render |
 | `src/world/items.h` | `#define ITEM_BOMB 9200` |
-| `src/world/items.c` | `[ITEM_BOMB]` consumable entry |
+| `src/world/items.c` | `[ITEM_BOMB]` positional entry in `ITEM_DEFS[]`; bump `MISC_ITEM_COUNT` 7→8 |
 | `src/game/store.c` | `cat_add(ITEM_BOMB, 50)` in `STORE_CAT_SPECIAL` |
-| `src/game/interact.c` | `ITEM_BOMB` branch in `interact_handle_place`; include `explosive.h` |
-| `src/main.c` | call `explosive_update` + `explosive_render`; include `explosive.h` |
-| `Makefile` | add `src/game/explosive.o` |
+| `src/game/interact.c` | `ITEM_BOMB` branch in `interact_handle_place` (right after the right-click gate, before the reach check); include `explosive.h` |
+| `src/main.c` | call `explosive_update` (after `lava_update`) + `explosive_render` (after `renderer_draw_break_progress`); include `explosive.h` |
+| `Makefile` | unchanged — `$(wildcard $(SRCDIR)/**/*.c)` auto-discovers `src/game/explosive.c` (same as `lava.c`); do not edit |
 
 ## Out of scope
 
