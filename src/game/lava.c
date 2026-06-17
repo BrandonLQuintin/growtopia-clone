@@ -61,6 +61,7 @@ void lava_generate_pools(World *w)
 void lava_update(World *w, Player *p, float dt)
 {
     static float s_lava_damage_accum = 0.0f;
+    static int s_was_in_lava = 0;
 
     float hw = PLAYER_WIDTH / 2.0f;
     int tile_left   = (int)((p->x - hw) / TILE_SIZE);
@@ -82,7 +83,13 @@ void lava_update(World *w, Player *p, float dt)
 
     if (!in_lava) {
         s_lava_damage_accum = 0.0f;
+        s_was_in_lava = 0;
         return;
+    }
+
+    if (!s_was_in_lava) {
+        p->health -= 1;
+        s_was_in_lava = 1;
     }
 
     s_lava_damage_accum += LAVA_DAMAGE_PER_SEC * dt;
@@ -102,6 +109,7 @@ void lava_update(World *w, Player *p, float dt)
         p->vx = 0;
         p->vy = 0;
         s_lava_damage_accum = 0.0f;
+        s_was_in_lava = 0;
         printf("Player died in lava, respawning.\n");
     }
 }

@@ -59,10 +59,14 @@ Runs each frame after `player_collide`:
    - Iterate the range; if any tile has `fg == BLOCK_LAVA`, the player is in lava this frame.
 
 2. **Damage tick (when in lava).**
-   - `s_lava_damage_accum += LAVA_DAMAGE_PER_SEC * dt;`
-   - `int dmg = (int)s_lava_damage_accum;`
-   - `p->health -= dmg; s_lava_damage_accum -= dmg;`
-   - When NOT in lava this frame: `s_lava_damage_accum = 0.0f;` (no lingering damage).
+   - A file-local `static int s_was_in_lava = 0;` flag tracks whether the previous frame was also in lava.
+   - **First-contact damage:** On the first frame of a new contact (`!s_was_in_lava`), deal 1 HP immediately (`p->health -= 1; s_was_in_lava = 1;`). This guarantees that even a 1-frame bounce contact deals damage (matching Growtopia's "touch = ouch" feel).
+   - **Sustained damage** via accumulator:
+     - `s_lava_damage_accum += LAVA_DAMAGE_PER_SEC * dt;`
+     - `int dmg = (int)s_lava_damage_accum;`
+     - `p->health -= dmg; s_lava_damage_accum -= (float)dmg;`
+   - When NOT in lava this frame: `s_lava_damage_accum = 0.0f; s_was_in_lava = 0;` (no lingering damage, and the next contact will trigger first-touch damage again).
+   - On death/respawn: both `s_lava_damage_accum` and `s_was_in_lava` reset to 0.
 
 3. **Bounce (when in lava).** At most once per frame regardless of overlap count:
    - `p->vy = LAVA_BOUNCE_VELOCITY;`
