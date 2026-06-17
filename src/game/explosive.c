@@ -78,8 +78,7 @@ void explosive_update(World *w, Player *p, float dt)
     } else if (tx < 0 || tx >= w->width || ty < 0 || ty >= w->height) {
         detonate_now = 1;
     } else {
-        Tile *t = world_get_tile(w, tx, ty);
-        if (t && block_is_solid(t->fg)) detonate_now = 1;
+        if (world_is_solid(w, tx, ty)) detonate_now = 1;
     }
 
     if (detonate_now) {
