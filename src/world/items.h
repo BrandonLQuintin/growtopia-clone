@@ -57,5 +57,6 @@ extern const int ITEM_DEF_COUNT;
 #define ITEM_HAT     9100
 #define ITEM_SHIRT   9101
 #define ITEM_PANTS   9102
+#define ITEM_BOMB   9200
 
 #endif

@@ -63,6 +63,7 @@ void store_init(Store *s)
     cat_add(cat, BLOCK_STORE, 1000);
     cat_add(cat, BLOCK_MAILBOX, 30);
     cat_add(cat, BLOCK_PORTAL, 500);
+    cat_add(cat, ITEM_BOMB, 50);
 }
 
 int store_buy(Store *s, int category, int index, int *gems, uint16_t *bought_item, int *bought_count)

@@ -48,7 +48,7 @@ static const ItemDef seed_defs[SEED_MAX - SEED_OFFSET] = {
     [SEED_BUSH      - SEED_OFFSET] = {SEED_BUSH,      "Bush Seed",      ITEM_CAT_SEED, 200,  30, 15, SEED_BUSH,      80, 180, 80, 1, 31,             60000,  3, 1, 0},
 };
 
-#define MISC_ITEM_COUNT 7
+#define MISC_ITEM_COUNT 8
 
 const ItemDef ITEM_DEFS[MISC_ITEM_COUNT] = {
     {0,    "Fist",    ITEM_CAT_TOOL,     1,    0,  0,    0, 255, 200, 150, 0, 0, 0, 0, 0, 1},
@@ -58,6 +58,7 @@ const ItemDef ITEM_DEFS[MISC_ITEM_COUNT] = {
     {9101, "Shirt",   ITEM_CAT_CLOTHING, 1,   30, 15, 9101, 200,  50,  50, 0, 0, 0, 0, 0, 0},
     {9102, "Pants",   ITEM_CAT_CLOTHING, 1,   30, 15, 9102,  50,  50, 150, 0, 0, 0, 0, 0, 0},
     {9999, "Gems",    ITEM_CAT_CURRENCY, 9999,  1,  0, 9999,   0, 200, 255, 0, 0, 0, 0, 0, 0},
+    {ITEM_BOMB, "Bomb", ITEM_CAT_CONSUMABLE, 50, 50, 25, 0, 40, 40, 40, 0, 0, 0, 0, 0, 0},
 };
 
 const int ITEM_DEF_COUNT = MISC_ITEM_COUNT;
