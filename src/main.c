@@ -11,6 +11,7 @@
 #include "engine/input.h"
 #include "engine/ui.h"
 #include "engine/world_select.h"
+#include "engine/clouds.h"
 #include "world/world.h"
 #include "world/block.h"
 #include "world/items.h"
@@ -41,6 +42,7 @@ static WorldSelect g_world_select;
 typedef struct {
     Renderer renderer;
     Camera camera;
+    Clouds clouds;
     Input input;
     UI ui;
     World world;
@@ -140,6 +142,7 @@ static void game_enter_world(Game *g, const char *name) {
 
     player_init(&g->player, g->world.spawn_x, g->world.spawn_y);
     explosive_reset();
+    clouds_init(&g->clouds, g->world.name, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
 
     int profile_loaded = 0;
     uint16_t equipped[3] = {0, 0, 0};
@@ -273,6 +276,7 @@ static void game_update(Game *g, float dt) {
         return;
     }
 
+    clouds_update(&g->clouds, dt);
     if (g->exit_confirm_active) {
         input_update(&g->input);
         return;
@@ -409,6 +413,7 @@ static void game_render(Game *g) {
 
     renderer_clear(&g->renderer, 0.4f, 0.7f, 1.0f);
     
+    clouds_render(&g->clouds, &g->renderer, &g->camera);
     renderer_begin_tile_batch(&g->renderer, g->camera.zoom);
     
     renderer_draw_world(&g->renderer, &g->world, &g->camera);
