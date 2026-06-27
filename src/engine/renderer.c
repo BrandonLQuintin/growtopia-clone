@@ -13,6 +13,8 @@
 int g_screen_w = 1280;
 int g_screen_h = 720;
 
+static void (*gl_mip_gen)(GLenum) = NULL;
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "../stb_image.h"
 
@@ -773,6 +775,10 @@ int renderer_init(Renderer *r) {
     SDL_GL_MakeCurrent(r->window, r->gl_context);
     SDL_GL_SetSwapInterval(1);
 
+    gl_mip_gen = (void (*)(GLenum))SDL_GL_GetProcAddress("glGenerateMipmap");
+    if (!gl_mip_gen)
+        gl_mip_gen = (void (*)(GLenum))SDL_GL_GetProcAddress("glGenerateMipmapEXT");
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
@@ -972,7 +978,12 @@ unsigned int renderer_load_texture(const unsigned char *data, int width, int hei
     glBindTexture(GL_TEXTURE_2D, tex);
     GLenum fmt = (channels == 4) ? GL_RGBA : GL_RGB;
     glTexImage2D(GL_TEXTURE_2D, 0, fmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    if (gl_mip_gen) {
+        gl_mip_gen(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -996,8 +1007,10 @@ void renderer_generate_atlas(Renderer *r) {
 void renderer_atlas_uv(int sprite_id, float *u0, float *v0, float *u1, float *v1) {
     int col = sprite_id % ATLAS_COLS;
     int row = sprite_id / ATLAS_COLS;
-    *u0 = (float)(col * TILE_TEX_SIZE) / (float)ATLAS_SIZE;
-    *v0 = (float)(row * TILE_TEX_SIZE) / (float)ATLAS_SIZE;
+    int x0 = col * ATLAS_SLOT + ATLAS_PAD;
+    int y0 = row * ATLAS_SLOT + ATLAS_PAD;
+    *u0 = (float)x0 / (float)ATLAS_SIZE;
+    *v0 = (float)y0 / (float)ATLAS_SIZE;
     *u1 = *u0 + (float)TILE_TEX_SIZE / (float)ATLAS_SIZE;
     *v1 = *v0 + (float)TILE_TEX_SIZE / (float)ATLAS_SIZE;
 }

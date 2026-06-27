@@ -577,14 +577,20 @@ void block_texture_generate_atlas_frame(unsigned char *atlas_buffer, int frame_i
         int sid = BLOCK_DEFS[i].tile_sprite_id;
         int col = sid % ATLAS_COLS;
         int row = sid / ATLAS_COLS;
-        int ox = col * TILE_TEX_SIZE;
-        int oy = row * TILE_TEX_SIZE;
+        int ox = col * ATLAS_SLOT;
+        int oy = row * ATLAS_SLOT;
         unsigned char tile_buf[TILE_TEX_SIZE * TILE_TEX_SIZE * 4];
         block_texture_generate(sid, frame_index, tile_buf);
-        for (int ty = 0; ty < TILE_TEX_SIZE; ty++) {
-            for (int tx = 0; tx < TILE_TEX_SIZE; tx++) {
+        for (int sy = 0; sy < ATLAS_SLOT; sy++) {
+            int ty = sy - ATLAS_PAD;
+            if (ty < 0) ty = 0;
+            if (ty >= TILE_TEX_SIZE) ty = TILE_TEX_SIZE - 1;
+            for (int sx = 0; sx < ATLAS_SLOT; sx++) {
+                int tx = sx - ATLAS_PAD;
+                if (tx < 0) tx = 0;
+                if (tx >= TILE_TEX_SIZE) tx = TILE_TEX_SIZE - 1;
                 int si = (ty * TILE_TEX_SIZE + tx) * 4;
-                int di = ((oy + ty) * ATLAS_SIZE + (ox + tx)) * 4;
+                int di = ((oy + sy) * ATLAS_SIZE + (ox + sx)) * 4;
                 atlas_buffer[di + 0] = tile_buf[si + 0];
                 atlas_buffer[di + 1] = tile_buf[si + 1];
                 atlas_buffer[di + 2] = tile_buf[si + 2];
