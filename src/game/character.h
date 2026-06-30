@@ -23,4 +23,12 @@ void character_path(const char *name, char *out, size_t out_size);
 int  character_load(Character *c, const char *path);
 int  character_save(const Character *c, const char *path);
 
+int  character_list(char names[][CHAR_NAME_MAX + 1], int *count, int max);
+int  character_exists(const char *name);
+int  character_delete(const char *name);
+int  character_rename(const char *old_name, const char *new_name);
+int  character_name_valid(const char *name);
+void character_apply_defaults(Character *c);
+int  character_migrate_from_profile(const char *profile_path);
+
 #endif
