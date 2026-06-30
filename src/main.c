@@ -23,6 +23,8 @@
 #include "game/interact.h"
 #include "game/lava.h"
 #include "game/explosive.h"
+#include "engine/char_select.h"
+#include "game/character.h"
 
 
 #define FPS_CAP 60
@@ -31,13 +33,15 @@
 #define PROFILE_PATH "res/worlds/player.dat"
 
 typedef enum {
+    GAME_STATE_CHAR_SELECT,
     GAME_STATE_MENU,
     GAME_STATE_PLAYING
 } GameState;
 
 static int g_running = 1;
-static GameState g_game_state = GAME_STATE_MENU;
+static GameState g_game_state = GAME_STATE_CHAR_SELECT;
 static WorldSelect g_world_select;
+static CharSelect g_char_select;
 
 typedef struct {
     Renderer renderer;
@@ -59,6 +63,7 @@ typedef struct {
     uint64_t last_time;
     char current_world_name[64];
     int exit_confirm_active;
+    char current_char_name[CHAR_NAME_MAX + 1];
 } Game;
 
 static int handle_equip_swap(Inventory *inv, Player *p, int a, int b)
@@ -106,15 +111,32 @@ static void game_save_all(Game *g) {
     char path[256];
     world_build_path(path, sizeof(path), g->current_world_name, "wld");
     world_save(&g->world, path);
-    uint16_t equipped[3] = {g->player.equipped_hat, g->player.equipped_shirt, g->player.equipped_pants};
-    inventory_save_profile(&g->inventory, g->player.gems, g->player.health, equipped, PROFILE_PATH);
-    printf("Game saved.\n");
+
+    Character c;
+    memset(&c, 0, sizeof(c));
+    snprintf(c.name, sizeof(c.name), "%s", g->current_char_name);
+    strncpy(c.last_world, g->current_world_name, sizeof(c.last_world) - 1);
+    c.last_world[sizeof(c.last_world) - 1] = '\0';
+    c.gems = g->player.gems;
+    c.health = g->player.health;
+    c.equipped[0] = g->player.equipped_hat;
+    c.equipped[1] = g->player.equipped_shirt;
+    c.equipped[2] = g->player.equipped_pants;
+    c.inventory = g->inventory;
+    char cpath[256];
+    character_path(g->current_char_name, cpath, sizeof(cpath));
+    if (character_save(&c, cpath) != 0) {
+        fprintf(stderr, "Failed to save character %s\n", g->current_char_name);
+    } else {
+        printf("Game saved.\n");
+    }
 }
 
 
 static void ensure_worlds_dir(void) {
     mkdir("res", 0755);
     mkdir("res/worlds", 0755);
+    mkdir("res/chars", 0755);
 }
 
 static void game_enter_world(Game *g, const char *name) {
@@ -145,11 +167,17 @@ static void game_enter_world(Game *g, const char *name) {
     clouds_init(&g->clouds, g->world.name, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
 
     int profile_loaded = 0;
-    uint16_t equipped[3] = {0, 0, 0};
-    if (inventory_load_profile(&g->inventory, &g->player.gems, &g->player.health, equipped, PROFILE_PATH) == 0) {
-        g->player.equipped_hat = equipped[0];
-        g->player.equipped_shirt = equipped[1];
-        g->player.equipped_pants = equipped[2];
+    Character c;
+    memset(&c, 0, sizeof(c));
+    char cpath[256];
+    character_path(g->current_char_name, cpath, sizeof(cpath));
+    if (character_load(&c, cpath) == 0) {
+        g->inventory = c.inventory;
+        g->player.gems = c.gems;
+        g->player.health = c.health;
+        g->player.equipped_hat = c.equipped[0];
+        g->player.equipped_shirt = c.equipped[1];
+        g->player.equipped_pants = c.equipped[2];
         profile_loaded = 1;
     }
 
@@ -202,6 +230,8 @@ static void game_init(Game *g) {
 
     ensure_worlds_dir();
     world_select_init(&g_world_select);
+    character_migrate_from_profile(PROFILE_PATH);
+    char_select_init(&g_char_select);
 }
 
 static void game_handle_events(Game *g) {
@@ -212,10 +242,20 @@ static void game_handle_events(Game *g) {
             return;
         }
 
-        if (g_game_state == GAME_STATE_MENU) {
+        if (g_game_state == GAME_STATE_CHAR_SELECT) {
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                 g_running = 0;
                 return;
+            }
+            char_select_handle_event(&g_char_select, &e);
+            continue;
+        }
+
+        if (g_game_state == GAME_STATE_MENU) {
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
+                g_game_state = GAME_STATE_CHAR_SELECT;
+                char_select_init(&g_char_select);
+                continue;
             }
             world_select_handle_event(&g_world_select, &e);
             continue;
@@ -266,6 +306,22 @@ static void game_handle_events(Game *g) {
 }
 
 static void game_update(Game *g, float dt) {
+    if (g_game_state == GAME_STATE_CHAR_SELECT) {
+        char_select_update(&g_char_select, dt);
+        if (g_char_select.selected >= 0) {
+            if (g->world.tiles) {
+                game_save_all(g);
+                world_free(&g->world);
+            }
+            snprintf(g->current_char_name, sizeof(g->current_char_name), "%s", g_char_select.names[g_char_select.selected]);
+            g_char_select.selected = -1;
+            world_select_init(&g_world_select);
+            g_game_state = GAME_STATE_MENU;
+        }
+        input_update(&g->input);
+        return;
+    }
+
     if (g_game_state == GAME_STATE_MENU) {
         world_select_update(&g_world_select, dt);
         if (g_world_select.submitted) {
@@ -404,6 +460,13 @@ static void game_update(Game *g, float dt) {
 }
 
 static void game_render(Game *g) {
+    if (g_game_state == GAME_STATE_CHAR_SELECT) {
+        renderer_clear(&g->renderer, 0.05f, 0.05f, 0.15f);
+        char_select_render(&g_char_select, &g->renderer);
+        renderer_present(&g->renderer);
+        return;
+    }
+
     if (g_game_state == GAME_STATE_MENU) {
         renderer_clear(&g->renderer, 0.05f, 0.05f, 0.15f);
         world_select_render(&g_world_select, &g->renderer);
