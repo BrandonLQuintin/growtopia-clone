@@ -51,6 +51,7 @@
 #define CHARACTER_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include "inventory.h"
 #include "../engine/world_select.h"
 
