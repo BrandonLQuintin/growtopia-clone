@@ -64,7 +64,6 @@ typedef struct {
     char current_world_name[64];
     int exit_confirm_active;
     char current_char_name[CHAR_NAME_MAX + 1];
-    char last_world[WORLD_NAME_MAX + 1];
 } Game;
 
 static int handle_equip_swap(Inventory *inv, Player *p, int a, int b)
@@ -126,8 +125,11 @@ static void game_save_all(Game *g) {
     c.inventory = g->inventory;
     char cpath[256];
     character_path(g->current_char_name, cpath, sizeof(cpath));
-    character_save(&c, cpath);
-    printf("Game saved.\n");
+    if (character_save(&c, cpath) != 0) {
+        fprintf(stderr, "Failed to save character %s\n", g->current_char_name);
+    } else {
+        printf("Game saved.\n");
+    }
 }
 
 
@@ -176,7 +178,6 @@ static void game_enter_world(Game *g, const char *name) {
         g->player.equipped_hat = c.equipped[0];
         g->player.equipped_shirt = c.equipped[1];
         g->player.equipped_pants = c.equipped[2];
-        snprintf(g->last_world, sizeof(g->last_world), "%s", c.last_world);
         profile_loaded = 1;
     }
 

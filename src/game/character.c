@@ -17,31 +17,32 @@ int character_save(const Character *c, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
 
-    fwrite(CHAR_MAGIC, 4, 1, f);
+    int ok = 1;
+    ok &= (fwrite(CHAR_MAGIC, 4, 1, f) == 1);
     int version = CHAR_VERSION;
-    fwrite(&version, sizeof(int), 1, f);
+    ok &= (fwrite(&version, sizeof(int), 1, f) == 1);
 
     char name_buf[64];
     memset(name_buf, 0, sizeof(name_buf));
     snprintf(name_buf, sizeof(name_buf), "%s", c->name);
-    fwrite(name_buf, sizeof(name_buf), 1, f);
+    ok &= (fwrite(name_buf, sizeof(name_buf), 1, f) == 1);
 
     char last_buf[64];
     memset(last_buf, 0, sizeof(last_buf));
     snprintf(last_buf, sizeof(last_buf), "%s", c->last_world);
-    fwrite(last_buf, sizeof(last_buf), 1, f);
+    ok &= (fwrite(last_buf, sizeof(last_buf), 1, f) == 1);
 
-    fwrite(&c->gems, sizeof(int), 1, f);
-    fwrite(&c->health, sizeof(int), 1, f);
-    fwrite(c->equipped, sizeof(uint16_t), 3, f);
+    ok &= (fwrite(&c->gems, sizeof(int), 1, f) == 1);
+    ok &= (fwrite(&c->health, sizeof(int), 1, f) == 1);
+    ok &= (fwrite(c->equipped, sizeof(uint16_t), 3, f) == 3);
 
-    for (int i = 0; i < INVENTORY_SIZE; i++) {
-        fwrite(&c->inventory.items[i], sizeof(uint16_t), 1, f);
-        fwrite(&c->inventory.counts[i], sizeof(int), 1, f);
+    for (int i = 0; i < INVENTORY_SIZE && ok; i++) {
+        ok &= (fwrite(&c->inventory.items[i], sizeof(uint16_t), 1, f) == 1);
+        ok &= (fwrite(&c->inventory.counts[i], sizeof(int), 1, f) == 1);
     }
 
     fclose(f);
-    return 0;
+    return ok ? 0 : -1;
 }
 
 int character_load(Character *c, const char *path)
