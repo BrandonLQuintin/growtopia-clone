@@ -23,6 +23,8 @@
 #include "game/interact.h"
 #include "game/lava.h"
 #include "game/explosive.h"
+#include "engine/char_select.h"
+#include "game/character.h"
 
 
 #define FPS_CAP 60
@@ -31,13 +33,15 @@
 #define PROFILE_PATH "res/worlds/player.dat"
 
 typedef enum {
+    GAME_STATE_CHAR_SELECT,
     GAME_STATE_MENU,
     GAME_STATE_PLAYING
 } GameState;
 
 static int g_running = 1;
-static GameState g_game_state = GAME_STATE_MENU;
+static GameState g_game_state = GAME_STATE_CHAR_SELECT;
 static WorldSelect g_world_select;
+static CharSelect g_char_select;
 
 typedef struct {
     Renderer renderer;
@@ -59,6 +63,8 @@ typedef struct {
     uint64_t last_time;
     char current_world_name[64];
     int exit_confirm_active;
+    char current_char_name[CHAR_NAME_MAX + 1];
+    char last_world[WORLD_NAME_MAX + 1];
 } Game;
 
 static int handle_equip_swap(Inventory *inv, Player *p, int a, int b)
@@ -115,6 +121,7 @@ static void game_save_all(Game *g) {
 static void ensure_worlds_dir(void) {
     mkdir("res", 0755);
     mkdir("res/worlds", 0755);
+    mkdir("res/chars", 0755);
 }
 
 static void game_enter_world(Game *g, const char *name) {
@@ -202,6 +209,8 @@ static void game_init(Game *g) {
 
     ensure_worlds_dir();
     world_select_init(&g_world_select);
+    character_migrate_from_profile(PROFILE_PATH);
+    char_select_init(&g_char_select);
 }
 
 static void game_handle_events(Game *g) {
@@ -212,10 +221,20 @@ static void game_handle_events(Game *g) {
             return;
         }
 
-        if (g_game_state == GAME_STATE_MENU) {
+        if (g_game_state == GAME_STATE_CHAR_SELECT) {
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                 g_running = 0;
                 return;
+            }
+            char_select_handle_event(&g_char_select, &e);
+            continue;
+        }
+
+        if (g_game_state == GAME_STATE_MENU) {
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
+                g_game_state = GAME_STATE_CHAR_SELECT;
+                char_select_init(&g_char_select);
+                continue;
             }
             world_select_handle_event(&g_world_select, &e);
             continue;
@@ -266,6 +285,18 @@ static void game_handle_events(Game *g) {
 }
 
 static void game_update(Game *g, float dt) {
+    if (g_game_state == GAME_STATE_CHAR_SELECT) {
+        char_select_update(&g_char_select, dt);
+        if (g_char_select.selected >= 0) {
+            snprintf(g->current_char_name, sizeof(g->current_char_name), "%s", g_char_select.names[g_char_select.selected]);
+            g_char_select.selected = -1;
+            world_select_init(&g_world_select);
+            g_game_state = GAME_STATE_MENU;
+        }
+        input_update(&g->input);
+        return;
+    }
+
     if (g_game_state == GAME_STATE_MENU) {
         world_select_update(&g_world_select, dt);
         if (g_world_select.submitted) {
@@ -404,6 +435,13 @@ static void game_update(Game *g, float dt) {
 }
 
 static void game_render(Game *g) {
+    if (g_game_state == GAME_STATE_CHAR_SELECT) {
+        renderer_clear(&g->renderer, 0.05f, 0.05f, 0.15f);
+        char_select_render(&g_char_select, &g->renderer);
+        renderer_present(&g->renderer);
+        return;
+    }
+
     if (g_game_state == GAME_STATE_MENU) {
         renderer_clear(&g->renderer, 0.05f, 0.05f, 0.15f);
         world_select_render(&g_world_select, &g->renderer);
