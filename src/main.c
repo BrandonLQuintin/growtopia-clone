@@ -112,8 +112,21 @@ static void game_save_all(Game *g) {
     char path[256];
     world_build_path(path, sizeof(path), g->current_world_name, "wld");
     world_save(&g->world, path);
-    uint16_t equipped[3] = {g->player.equipped_hat, g->player.equipped_shirt, g->player.equipped_pants};
-    inventory_save_profile(&g->inventory, g->player.gems, g->player.health, equipped, PROFILE_PATH);
+
+    Character c;
+    memset(&c, 0, sizeof(c));
+    snprintf(c.name, sizeof(c.name), "%s", g->current_char_name);
+    strncpy(c.last_world, g->current_world_name, sizeof(c.last_world) - 1);
+    c.last_world[sizeof(c.last_world) - 1] = '\0';
+    c.gems = g->player.gems;
+    c.health = g->player.health;
+    c.equipped[0] = g->player.equipped_hat;
+    c.equipped[1] = g->player.equipped_shirt;
+    c.equipped[2] = g->player.equipped_pants;
+    c.inventory = g->inventory;
+    char cpath[256];
+    character_path(g->current_char_name, cpath, sizeof(cpath));
+    character_save(&c, cpath);
     printf("Game saved.\n");
 }
 
@@ -152,11 +165,18 @@ static void game_enter_world(Game *g, const char *name) {
     clouds_init(&g->clouds, g->world.name, g->world.width * TILE_SIZE, g->world.height * TILE_SIZE);
 
     int profile_loaded = 0;
-    uint16_t equipped[3] = {0, 0, 0};
-    if (inventory_load_profile(&g->inventory, &g->player.gems, &g->player.health, equipped, PROFILE_PATH) == 0) {
-        g->player.equipped_hat = equipped[0];
-        g->player.equipped_shirt = equipped[1];
-        g->player.equipped_pants = equipped[2];
+    Character c;
+    memset(&c, 0, sizeof(c));
+    char cpath[256];
+    character_path(g->current_char_name, cpath, sizeof(cpath));
+    if (character_load(&c, cpath) == 0) {
+        g->inventory = c.inventory;
+        g->player.gems = c.gems;
+        g->player.health = c.health;
+        g->player.equipped_hat = c.equipped[0];
+        g->player.equipped_shirt = c.equipped[1];
+        g->player.equipped_pants = c.equipped[2];
+        snprintf(g->last_world, sizeof(g->last_world), "%s", c.last_world);
         profile_loaded = 1;
     }
 
