@@ -309,6 +309,10 @@ static void game_update(Game *g, float dt) {
     if (g_game_state == GAME_STATE_CHAR_SELECT) {
         char_select_update(&g_char_select, dt);
         if (g_char_select.selected >= 0) {
+            if (g->world.tiles) {
+                game_save_all(g);
+                world_free(&g->world);
+            }
             snprintf(g->current_char_name, sizeof(g->current_char_name), "%s", g_char_select.names[g_char_select.selected]);
             g_char_select.selected = -1;
             world_select_init(&g_world_select);
